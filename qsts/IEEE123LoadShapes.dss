@@ -89,3 +89,5 @@ New Loadshape.loadshape_S111a npts=35040 interval=0.25 mult=(file=../profiles/lo
 New Loadshape.loadshape_S112a npts=35040 interval=0.25 mult=(file=../profiles/load_profiles/loadshape_S112a.csv) qmult=(file=../profiles/load_profiles/loadshape_S112a.csv)
 New Loadshape.loadshape_S113a npts=35040 interval=0.25 mult=(file=../profiles/load_profiles/loadshape_S113a.csv) qmult=(file=../profiles/load_profiles/loadshape_S113a.csv)
 New Loadshape.loadshape_S114a npts=35040 interval=0.25 mult=(file=../profiles/load_profiles/loadshape_S114a.csv) qmult=(file=../profiles/load_profiles/loadshape_S114a.csv)
+! Новый профиль для тестового здания
+New Loadshape.loadshape_Test npts=35040 interval=0.25 mult=(file=../profiles/load_profiles/loadshape_Test.csv) qmult=(file=../profiles/load_profiles/loadshape_Test.csv)

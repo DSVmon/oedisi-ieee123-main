@@ -165,7 +165,9 @@ New Line.L113   Phases=1 Bus1=113.1      Bus2=114.1      LineCode=9    Length=0.
 New Line.L114   Phases=3 Bus1=135.1.2.3  Bus2=35.1.2.3   LineCode=4    Length=0.375
 New Line.L116   Phases=3 Bus1=152.1.2.3  Bus2=52.1.2.3   LineCode=1    Length=0.4
 New Line.L117   Phases=3 Bus1=160r.1.2.3 Bus2=67.1.2.3   LineCode=6    Length=0.35
-
+! Добавление (присоединение) нового тестового здания в распределительную энергерическую сеть.
+! Характеристики: 3 фазы, запитка от узла 81, питающий кабель "тип_1", длина 1000
+New Line.Line_To_Test Phases=3 Bus1=81.1.2.3 Bus2=TestNode.1.2.3 LineCode=1 Length=1.0
 
 ! NORMALLY CLOSED SWITCHES ARE DEFINED AS SHORT LINES
 ! Could also be defned by setting the Switch=Yes property
@@ -224,5 +226,4 @@ Redirect IEEE123Pv.dss
 
 Set VoltageBases = [4.16, 0.48, .303]    ! ARRAY OF VOLTAGES IN KV
 CalcVoltageBases  ! PERFORMS ZERO LOAD POWER FLOW TO ESTIMATE VOLTAGE BASES
-
 

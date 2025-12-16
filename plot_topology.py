@@ -5,7 +5,7 @@ from matplotlib.widgets import RadioButtons, Button, CheckButtons, Slider
 from matplotlib.animation import FuncAnimation
 import numpy as np
 import datetime
-from run_qsts_plot import run_simulation_for_node, analyze_voltage_violations
+from run_qsts_plot import run_simulation_for_node, analyze_voltage_violations, clear_regulator_state
 
 # --- ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ---
 node_states = {}       
@@ -107,6 +107,23 @@ def plot_interactive_topology():
         pv_buses.add(bus_name)
         i = pvs.Next
 
+    bus_to_reg_names = {} 
+    regs = circuit.RegControls
+    idx = regs.First
+    while idx > 0:
+        reg_name = regs.Name
+        transformer_name = regs.Transformer
+        if transformer_name:
+            circuit.SetActiveElement(f"Transformer.{transformer_name}")
+            buses = circuit.ActiveCktElement.BusNames
+            for b in buses:
+                clean_b = b.split('.')[0]
+                if clean_b not in bus_to_reg_names:
+                    bus_to_reg_names[clean_b] = []
+                if reg_name not in bus_to_reg_names[clean_b]:
+                    bus_to_reg_names[clean_b].append(reg_name)
+        idx = regs.Next
+
     groups = {
         'load':   {'x': [], 'y': [], 'names': [], 'base_color': 'red'},
         'reg':    {'x': [], 'y': [], 'names': [], 'base_color': 'orange'},
@@ -136,12 +153,10 @@ def plot_interactive_topology():
             groups[g]['y'].append(y)
             groups[g]['names'].append(bus)
 
-    # Отрисовка
     fig, ax = plt.subplots(figsize=(16, 14))
     plt.subplots_adjust(left=0.25, bottom=0.25) 
     ax.set_title("Карта IEEE 123: Тренажер и Анализ", fontsize=16)
 
-    # Линии
     lines = circuit.Lines
     lc = lines.First
     while lc > 0:
@@ -154,21 +169,12 @@ def plot_interactive_topology():
             ax.plot([x1, x2], [y1, y2], c=c, lw=w, zorder=z)
         lc = lines.Next
 
-    # Легенда линий
     ax.plot([],[], c='black', lw=2, label='3 Фазы')
     ax.plot([],[], c='teal', lw=1.5, label='2 Фазы')
     ax.plot([],[], c='darkgray', lw=1, label='1 Фаза')
 
-    # Узлы
     scatter_objects = {}
-    
-    # Словарь для легенды
-    lbl_map = {
-        'load': 'Нагрузка',
-        'reg': 'Регулятор', 
-        'pv': 'Солнечная панель', 
-        'normal': 'Узел'
-    }
+    lbl_map = {'load': 'Нагрузка', 'reg': 'Регулятор', 'pv': 'Солнечная панель', 'normal': 'Узел'}
 
     for g_name, g in groups.items():
         marker = 'o'
@@ -179,7 +185,6 @@ def plot_interactive_topology():
         size = 250 if g_name == 'pv' else (80 if g_name in ['load', 'reg'] else 30)
         edge = 'orange' if g_name == 'pv' else ('black' if g_name!='normal' else None)
         
-        # ВОССТАНОВЛЕНО: label=lbl_map[g_name]
         sc = ax.scatter(g['x'], g['y'], s=size, c=g['base_color'], marker=marker, 
                         label=lbl_map[g_name], zorder=3, edgecolors=edge, picker=5)
         
@@ -193,8 +198,13 @@ def plot_interactive_topology():
 
     for g_name, g in groups.items():
         for i, txt in enumerate(g['names']):
-            fw = 'bold' if g_name in ['load', 'pv'] else 'normal'
-            ax.text(g['x'][i], g['y'][i], f"  {txt}", fontsize=10, fontweight=fw, ha='left', va='center')
+            fw = 'bold' if g_name in ['load', 'pv', 'reg'] else 'normal'
+            display_text = f"  {txt}"
+            if g_name == 'reg' and txt in bus_to_reg_names:
+                reg_list = bus_to_reg_names[txt]
+                reg_str = ",".join(reg_list)
+                display_text = f"  {txt}\n  ({reg_str})" 
+            ax.text(g['x'][i], g['y'][i], display_text, fontsize=10, fontweight=fw, ha='left', va='center')
 
     circuit.SetActiveBus("150")
     if circuit.ActiveBus.x != 0:
@@ -204,7 +214,6 @@ def plot_interactive_topology():
     ax.axis('equal')
     ax.grid(True, alpha=0.3)
 
-    # --- ИНТЕРФЕЙС ---
     rax_mode = plt.axes([0.02, 0.70, 0.20, 0.12], facecolor='#f0f0f0')
     radio_mode = RadioButtons(rax_mode, ('Нормальный режим', 'Короткое замыкание', 'Обрыв линии'))
     translation_map = {'Нормальный режим': 'Normal', 'Короткое замыкание': 'Short Circuit', 'Обрыв линии': 'Open Line'}
@@ -241,6 +250,9 @@ def plot_interactive_topology():
     btn_anal_ax = plt.axes([0.12, 0.35, 0.10, 0.05])
     btn_analyze = Button(btn_anal_ax, 'Анализ V', color='violet', hovercolor='magenta')
 
+    slider_load_ax = plt.axes([0.25, 0.18, 0.65, 0.03], facecolor='#ffcccc') 
+    slider_load = Slider(slider_load_ax, 'Нагрузка TestNode (кВт)', 0, 5000, valinit=0, valstep=100, color='red')
+
     slider_day_ax = plt.axes([0.25, 0.14, 0.65, 0.03], facecolor='lightgoldenrodyellow')
     slider_day = Slider(slider_day_ax, 'День года', 1, 365, valinit=1, valstep=1, color='orange')
     
@@ -259,8 +271,8 @@ def plot_interactive_topology():
     
     plot_interactive_topology.slider_day = slider_day
     plot_interactive_topology.slider_temp = slider_temp
+    plot_interactive_topology.slider_load = slider_load
 
-    # --- АНИМАЦИЯ ---
     blink_state = False
     def animate(frame):
         nonlocal blink_state
@@ -295,9 +307,9 @@ def plot_interactive_topology():
                     if blink_state: new_colors[i] = [0.1, 0.1, 0.1, 1]
                 
                 elif name in voltage_issues['over']:
-                    new_colors[i] = [1, 0.5, 0, 1] # Оранжевый
+                    new_colors[i] = [1, 0.5, 0, 1] 
                 elif name in voltage_issues['under']:
-                    new_colors[i] = [0, 0.8, 1, 1] # Голубой
+                    new_colors[i] = [0, 0.8, 1, 1] 
 
             sc.set_facecolors(new_colors)
         return scatter_objects.values()
@@ -319,7 +331,7 @@ def plot_interactive_topology():
 
     def on_plot_click(event):
         if event.inaxes != ax: return 
-        if event.button != 1: return  
+        
         click_x, click_y = event.x, event.y
         closest_bus = None
         min_dist = float('inf')
@@ -331,6 +343,16 @@ def plot_interactive_topology():
                 closest_bus = bus
         
         if closest_bus and min_dist < 15:
+            # --- ЛОГИКА КЛИКОВ (ЛКМ vs ПКМ) ---
+            active_mode = False
+            if event.button == 1:   # ЛКМ (Левая) - Инспекция
+                active_mode = False
+            elif event.button == 3: # ПКМ (Правая) - Управление
+                active_mode = True
+            else:
+                return # Игнорируем колесико и прочее
+            # ----------------------------------
+
             mode_ru = radio_mode.value_selected
             mode_eng = translation_map[mode_ru]
             status = check_phase.get_status()
@@ -338,6 +360,7 @@ def plot_interactive_topology():
             pv_on = check_pv.get_status()[0]
             day = slider_day.val
             temp = slider_temp.val
+            load_kw = slider_load.val
             
             if mode_eng == 'Normal':
                 if closest_bus in node_states: del node_states[closest_bus]
@@ -348,19 +371,24 @@ def plot_interactive_topology():
                 node_states[closest_bus] = {'mode': mode_eng, 'phases': selected_phases_list}
             
             update_markers()
-            run_simulation_for_node(closest_bus, node_states, pv_enabled=pv_on, day_of_year=day, temperature=temp)
+            
+            # Запускаем симуляцию с нужным флагом active_control
+            run_simulation_for_node(closest_bus, node_states, pv_enabled=pv_on, day_of_year=day, temperature=temp, test_load_kw=load_kw, active_control=active_mode)
 
     def on_reset(event):
         node_states.clear()
         voltage_issues['over'].clear()
         voltage_issues['under'].clear()
+        clear_regulator_state()
         update_markers()
 
     def on_analyze(event):
         pv_on = check_pv.get_status()[0]
         day = slider_day.val
         temp = slider_temp.val
-        over, under = analyze_voltage_violations(node_states, pv_on, day, temp)
+        load_kw = slider_load.val
+        
+        over, under = analyze_voltage_violations(node_states, pv_on, day, temp, test_load_kw=load_kw)
         voltage_issues['over'] = over
         voltage_issues['under'] = under
 
@@ -374,7 +402,7 @@ def plot_interactive_topology():
         try: manager.window.showMaximized()
         except: pass
 
-    print("Система готова.\n- Кнопка 'Анализ V' покажет зоны перенапряжения/просадки.")
+    print("Система готова.\n- ЛКМ: Инспекция узла (без изменений)\n- ПКМ: Активное управление (изменяет регуляторы)\n- Кнопка 'Анализ V' покажет зоны перенапряжения/просадки.")
     plt.show()
 
 if __name__ == "__main__":

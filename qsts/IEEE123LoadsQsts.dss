@@ -89,3 +89,10 @@ New Load.S111a Bus1=111.1  Phases=1 Conn=Wye   Model=8 zipv=(.3,.3,.4,.3,.3,.4,0
 New Load.S112a Bus1=112.1  Phases=1 Conn=Wye   Model=8 zipv=(.3,.3,.4,.3,.3,.4,0.0) vminpu=0.85 vmaxpu=1.2  kV=2.4   kW=20.0  kvar=10.0   yearly=loadshape_S112a
 New Load.S113a Bus1=113.1  Phases=1 Conn=Wye   Model=8 zipv=(.3,.3,.4,.3,.3,.4,0.0) vminpu=0.85 vmaxpu=1.2  kV=2.4   kW=40.0  kvar=20.0   yearly=loadshape_S113a
 New Load.S114a Bus1=114.1  Phases=1 Conn=Wye   Model=8 zipv=(.3,.3,.4,.3,.3,.4,0.0) vminpu=0.85 vmaxpu=1.2  kV=2.4   kW=20.0  kvar=10.0   yearly=loadshape_S114a
+! Новое здание. Model=1 означает "Постоянная мощность" (Constant P-Q). 
+! Это значит, что даже если напряжение в сети просядет, здание будет пытаться "высасывать" свои 150 кВт, увеличивая ток. 
+! Это самый тяжелый режим для сети.
+! Тип подключения - звезда (Wye), 3 фазы, напряжение 4.16 кВ.
+! Нагрузка: 150 кВт активной мощности и 30 кВАр реактивной мощности.
+! Годовая нагрузочная форма - loadshape_S1a (взято из файла loadshapes.dss).
+New Load.Test_Building Bus1=TestNode.1.2.3 Phases=3 Conn=Wye Model=8 zipv=(.3,.3,.4,.3,.3,.4,0.0) vminpu=0.85 vmaxpu=1.2  kV=2.4   kW=1.0  kvar=1.0 yearly=loadshape_Test
