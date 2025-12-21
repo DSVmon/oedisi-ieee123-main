@@ -5,6 +5,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 import datetime
 
+# --- LANGUAGE SETTINGS (SELECT 'EN' or 'RU') ---
+LANG = 'EN'
+
+def tr(en_text, ru_text):
+    return en_text if LANG == 'EN' else ru_text
+
 # --- ГЛОБАЛЬНАЯ ПАМЯТЬ СОСТОЯНИЙ РЕГУЛЯТОРОВ ---
 GLOBAL_REGULATOR_STATE = {}
 
@@ -12,7 +18,7 @@ def clear_regulator_state():
     """Очищает память регуляторов (для кнопки Сброс)."""
     global GLOBAL_REGULATOR_STATE
     GLOBAL_REGULATOR_STATE = {}
-    print("🧹 Память регуляторов очищена.")
+    print(tr("🧹 Regulator memory cleared.", "🧹 Память регуляторов очищена."))
 
 # =============================================================================
 # КЛАСС КОНТРОЛЛЕРА
@@ -28,11 +34,13 @@ class GridController:
         self.xfmr_to_reg = self._map_transformers_to_regulators()
         self.reg_chain = self._get_upstream_regulators()
         
-        print(f"🎮 Контроллер для узла {target_bus}.")
+        print(tr(f"🎮 Controller for node {target_bus}.", f"🎮 Контроллер для узла {target_bus}."))
         if self.reg_chain:
-            print(f"⛓ Цепочка помощи: {' -> '.join(self.reg_chain)} (Всего: {len(self.reg_chain)})")
+            msg = tr(f"⛓ Help chain: {' -> '.join(self.reg_chain)} (Total: {len(self.reg_chain)})",
+                     f"⛓ Цепочка помощи: {' -> '.join(self.reg_chain)} (Всего: {len(self.reg_chain)})")
+            print(msg)
         else:
-            print("⚠ На пути к этому узлу нет регуляторов!")
+            print(tr("⚠ No regulators on the path to this node!", "⚠ На пути к этому узлу нет регуляторов!"))
 
     def _build_topology_map(self):
         adj = {}
@@ -131,10 +139,10 @@ class GridController:
 
         if v_min < self.min_voltage:
             direction = 1
-            reason = f"Просадка (min {v_min:.3f})"
+            reason = tr(f"Voltage Sag (min {v_min:.3f})", f"Просадка (min {v_min:.3f})")
         elif v_max > self.max_voltage:
             direction = -1
-            reason = f"Перенапряжение (max {v_max:.3f})"
+            reason = tr(f"Overvoltage (max {v_max:.3f})", f"Перенапряжение (max {v_max:.3f})")
             
         if direction != 0:
             for reg_name in self.reg_chain:
@@ -144,11 +152,15 @@ class GridController:
                 
                 if -16 <= new_tap <= 16:
                     self.circuit.RegControls.TapNumber = new_tap
-                    actions.append(f"⏱ Шаг {step_number}: {reason} -> 🎯 {reg_name} (Tap {current_tap}->{new_tap})")
+                    msg = tr(f"⏱ Step {step_number}: {reason} -> 🎯 {reg_name} (Tap {current_tap}->{new_tap})",
+                             f"⏱ Шаг {step_number}: {reason} -> 🎯 {reg_name} (Tap {current_tap}->{new_tap})")
+                    actions.append(msg)
                     action_occurred = True
                     break 
                 else:
-                    actions.append(f"⚠ Шаг {step_number}: {reg_name} НА ПРЕДЕЛЕ ({current_tap}). Передаю управление выше...")
+                    msg = tr(f"⚠ Step {step_number}: {reg_name} AT LIMIT ({current_tap}). Passing control upstream...",
+                             f"⚠ Шаг {step_number}: {reg_name} НА ПРЕДЕЛЕ ({current_tap}). Передаю управление выше...")
+                    actions.append(msg)
                     continue
         
         return actions, action_occurred
@@ -193,7 +205,8 @@ def setup_circuit(dss_engine, node_states_dict, pv_enabled, day_of_year, tempera
 
     if test_load_kw > 0.0:
         text.Command = f"New Load.Test_Experiment_Load Bus1=TestNode.1.2.3 Phases=3 kV=4.16 kW={test_load_kw} PF=0.98 Model=1"
-        print(f"🔥 ВНИМАНИЕ: Подключена экспериментальная нагрузка {test_load_kw} кВт на TestNode!")
+        print(tr(f"🔥 WARNING: Experimental load {test_load_kw} kW connected to TestNode!",
+                 f"🔥 ВНИМАНИЕ: Подключена экспериментальная нагрузка {test_load_kw} кВт на TestNode!"))
 
     for bus, state in node_states_dict.items():
         mode = state['mode']
@@ -221,17 +234,17 @@ def analyze_voltage_violations(node_states_dict, pv_enabled, day_of_year, temper
     dss_engine.Text.Command = "Set ControlMode=OFF"
     
     if GLOBAL_REGULATOR_STATE:
-        print("\n🔧 [АНАЛИЗ] Применяем настройки регуляторов из памяти:")
+        print(tr("\n🔧 [ANALYSIS] Applying regulator settings from memory:", "\n🔧 [АНАЛИЗ] Применяем настройки регуляторов из памяти:"))
         for reg_name, tap_val in GLOBAL_REGULATOR_STATE.items():
             circuit.RegControls.Name = reg_name
             circuit.RegControls.TapNumber = tap_val
-            print(f"   -> {reg_name} установлен на Tap {tap_val}")
+            print(tr(f"   -> {reg_name} set to Tap {tap_val}", f"   -> {reg_name} установлен на Tap {tap_val}"))
     else:
-        print("\nℹ️ [АНАЛИЗ] Нет сохраненных настроек. Используем исходные.")
+        print(tr("\nℹ️ [ANALYSIS] No saved settings. Using defaults.", "\nℹ️ [АНАЛИЗ] Нет сохраненных настроек. Используем исходные."))
     
     dss_engine.Text.Command = "Set Number=1" 
     
-    print("\n--- СКАНИРОВАНИЕ СЕТИ (ControlMode=OFF) ---")
+    print(tr("\n--- NETWORK SCANNING (ControlMode=OFF) ---", "\n--- СКАНИРОВАНИЕ СЕТИ (ControlMode=OFF) ---"))
     max_v = {}
     min_v = {}
     max_total_kw = 0.0
@@ -258,20 +271,28 @@ def analyze_voltage_violations(node_states_dict, pv_enabled, day_of_year, temper
             if v < min_v[bus] and v > 0.0: min_v[bus] = v
 
     over, under = set(), set()
-    print(f"{'УЗЕЛ':<10} | {'СТАТУС':<15} | {'ЗНАЧЕНИЕ (p.u.)'}")
+    h_node = tr('NODE', 'УЗЕЛ')
+    h_stat = tr('STATUS', 'СТАТУС')
+    h_val = tr('VALUE (p.u.)', 'ЗНАЧЕНИЕ (p.u.)')
+    print(f"{h_node:<10} | {h_stat:<15} | {h_val}")
     print("-" * 45)
-    print(f"⚡ Общая активная мощность в сети (пик): {max_total_kw:.2f} кВт")
+    
+    msg_total = tr(f"⚡ Total active power in grid (peak): {max_total_kw:.2f} kW", 
+                   f"⚡ Общая активная мощность в сети (пик): {max_total_kw:.2f} кВт")
+    print(msg_total)
     print("-" * 45)
     
     sorted_buses = sorted(max_v.keys())
     for bus in sorted_buses:
         if bus in ['150', 'sourcebus']: continue
         if min_v[bus] < 0.95 and min_v[bus] > 0.001: 
-            under.add(bus); print(f"{bus:<10} | ПРОСАДКА      | {min_v[bus]:.4f}")
+            stat = tr('SAG', 'ПРОСАДКА')
+            under.add(bus); print(f"{bus:<10} | {stat:<15} | {min_v[bus]:.4f}")
         elif max_v[bus] > 1.05:
-            over.add(bus); print(f"{bus:<10} | ПЕРЕНАПРЯЖЕНИЕ | {max_v[bus]:.4f}")
+            stat = tr('OVERVOLTAGE', 'ПЕРЕНАПРЯЖЕНИЕ')
+            over.add(bus); print(f"{bus:<10} | {stat:<15} | {max_v[bus]:.4f}")
 
-    if not over and not under: print("✅ Нарушений не обнаружено.")
+    if not over and not under: print(tr("✅ No violations found.", "✅ Нарушений не обнаружено."))
     return over, under
 
 def run_simulation_for_node(target_bus_name, node_states_dict, pv_enabled=True, day_of_year=1, temperature=25.0, test_load_kw=0.0, active_control=True):
@@ -284,7 +305,7 @@ def run_simulation_for_node(target_bus_name, node_states_dict, pv_enabled=True, 
     setup_circuit(dss_engine, node_states_dict, pv_enabled, day_of_year, temperature, test_load_kw)
     
     if GLOBAL_REGULATOR_STATE:
-        print("\n📥 [СТАРТ] Восстанавливаем состояние регуляторов из памяти:")
+        print(tr("\n📥 [START] Restoring regulator state from memory:", "\n📥 [СТАРТ] Восстанавливаем состояние регуляторов из памяти:"))
         for reg_name, tap_val in GLOBAL_REGULATOR_STATE.items():
             circuit.RegControls.Name = reg_name
             circuit.RegControls.TapNumber = tap_val
@@ -292,18 +313,19 @@ def run_simulation_for_node(target_bus_name, node_states_dict, pv_enabled=True, 
     # --- ИНСПЕКЦИЯ СОСТАВА УЗЛА ---
     circuit.SetActiveBus(target_bus_name)
     print(f"\n{'='*40}")
-    print(f"🧐 ИНСПЕКЦИЯ УЗЛА {target_bus_name}")
+    print(tr(f"🧐 NODE INSPECTION {target_bus_name}", f"🧐 ИНСПЕКЦИЯ УЗЛА {target_bus_name}"))
     pce = circuit.ActiveBus.AllPCEatBus 
     pde = circuit.ActiveBus.AllPDEatBus 
-    print(f"🔌 Потребители/Генераторы (PCE): {pce}")
-    print(f"⚡ Линии/Трансформаторы  (PDE): {pde}")
+    print(tr(f"🔌 Consumers/Generators (PCE): {pce}", f"🔌 Потребители/Генераторы (PCE): {pce}"))
+    print(tr(f"⚡ Lines/Transformers  (PDE): {pde}", f"⚡ Линии/Трансформаторы  (PDE): {pde}"))
     if len(pce) > 0 and test_load_kw == 0 and "TestNode" in target_bus_name:
-        print("⚠ ВНИМАНИЕ: На узле есть нагрузка, хотя слайдер на 0! Проверьте файлы .dss")
+        print(tr("⚠ WARNING: Load exists on node, but slider is 0! Check .dss files", 
+                 "⚠ ВНИМАНИЕ: На узле есть нагрузка, хотя слайдер на 0! Проверьте файлы .dss"))
     print(f"{'='*40}")
     # ------------------------------
 
     # --- ВЫВОД СОСТОЯНИЯ РЕГУЛЯТОРОВ (ТЕПЕРЬ ДЛЯ ВСЕХ РЕЖИМОВ) ---
-    print("\n🏁 [ТЕКУЩЕЕ СОСТОЯНИЕ] Положения регуляторов:")
+    print(tr("\n🏁 [CURRENT STATE] Regulator positions:", "\n🏁 [ТЕКУЩЕЕ СОСТОЯНИЕ] Положения регуляторов:"))
     regs = circuit.RegControls
     idx = regs.First
     while idx > 0:
@@ -315,15 +337,15 @@ def run_simulation_for_node(target_bus_name, node_states_dict, pv_enabled=True, 
     if active_control:
         controller = GridController(circuit, target_bus_name)
     else:
-        print("\n👁️ [РЕЖИМ МОНИТОРИНГА] Управление регуляторами ОТКЛЮЧЕНО.")
-        print("   Симуляция пройдет с текущими (восстановленными) настройками.")
+        print(tr("\n👁️ [MONITORING MODE] Regulator control DISABLED.", "\n👁️ [РЕЖИМ МОНИТОРИНГА] Управление регуляторами ОТКЛЮЧЕНО."))
+        print(tr("   Simulation will run with current (restored) settings.", "   Симуляция пройдет с текущими (восстановленными) настройками."))
     
     text.Command = "Set ControlMode=OFF" 
     text.Command = "Set Number=1"
 
     elem, term = get_controlling_element(circuit, target_bus_name)
     if not elem:
-        print(f"❌ Ошибка: Не к чему подключить монитор для {target_bus_name}")
+        print(tr(f"❌ Error: Nothing to connect monitor to for {target_bus_name}", f"❌ Ошибка: Не к чему подключить монитор для {target_bus_name}"))
         return
 
     monitor_vi = f"Mon_Target_{target_bus_name}_VI"
@@ -331,7 +353,7 @@ def run_simulation_for_node(target_bus_name, node_states_dict, pv_enabled=True, 
     text.Command = f"New Monitor.{monitor_vi} element={elem} terminal={term} mode=0"
     text.Command = f"New Monitor.{monitor_pq} element={elem} terminal={term} mode=1 ppolar=no"
     
-    print(f"\n🚀 Запуск симуляции (Узел {target_bus_name})...")
+    print(tr(f"\n🚀 Starting simulation (Node {target_bus_name})...", f"\n🚀 Запуск симуляции (Узел {target_bus_name})..."))
     
     regulation_steps = []
     max_total_kw = 0.0
@@ -353,7 +375,7 @@ def run_simulation_for_node(target_bus_name, node_states_dict, pv_enabled=True, 
                 for msg in logs: print(msg)
 
     if active_control:
-        print("\n🏁 [КОНЕЦ] Итоговые положения регуляторов (сохранено в память):")
+        print(tr("\n🏁 [END] Final regulator positions (saved to memory):", "\n🏁 [КОНЕЦ] Итоговые положения регуляторов (сохранено в память):"))
         regs = circuit.RegControls
         idx = regs.First
         while idx > 0:
@@ -362,7 +384,7 @@ def run_simulation_for_node(target_bus_name, node_states_dict, pv_enabled=True, 
             print(f"   - {regs.Name}: {tap_now}")
             idx = regs.Next
     else:
-        print("\nℹ️ [ИНФО] Состояние регуляторов не изменялось и не сохранялось.")
+        print(tr("\nℹ️ [INFO] Regulator state was not changed or saved.", "\nℹ️ [ИНФО] Состояние регуляторов не изменялось и не сохранялось."))
 
     if solution.Converged:
         text.Command = f"Export Monitor {monitor_vi}"
@@ -395,7 +417,7 @@ def run_simulation_for_node(target_bus_name, node_states_dict, pv_enabled=True, 
             kv_base_dss = circuit.ActiveBus.kVBase 
             
             print(f"\n{'='*40}")
-            print(f" СВОДКА ПО УЗЛУ: {target_bus_name}")
+            print(tr(f" NODE SUMMARY: {target_bus_name}", f" СВОДКА ПО УЗЛУ: {target_bus_name}"))
             print(f"{'='*40}")
             
             v_meas_mean = 0
@@ -407,16 +429,16 @@ def run_simulation_for_node(target_bus_name, node_states_dict, pv_enabled=True, 
             
             v_base_candidate = kv_base_dss * 1000
             v_base_phase = v_base_candidate
-            base_type_str = "(Фазное)"
+            base_type_str = tr("(Phase-to-Neutral)", "(Фазное)")
             if v_base_candidate > 0 and (v_meas_mean / v_base_candidate) < 0.8 and v_meas_mean > 10:
                  v_base_phase = v_base_candidate / np.sqrt(3)
-                 base_type_str = "(Линейное -> привели к Фазному)"
+                 base_type_str = tr("(Line-to-Line -> converted to Phase)", "(Линейное -> привели к Фазному)")
             
-            print(f"Параметры:      {circuit.ActiveBus.NumNodes} фаз(ы)")
-            print(f"База OpenDSS:   {kv_base_dss} кВ {base_type_str}")
-            print(f"База для p.u.:  {v_base_phase:.1f} В (Фазная)")
+            print(tr(f"Parameters:      {circuit.ActiveBus.NumNodes} phase(s)", f"Параметры:      {circuit.ActiveBus.NumNodes} фаз(ы)"))
+            print(tr(f"OpenDSS Base:   {kv_base_dss} kV {base_type_str}", f"База OpenDSS:   {kv_base_dss} кВ {base_type_str}"))
+            print(tr(f"Base for p.u.:  {v_base_phase:.1f} V (Phase)", f"База для p.u.:  {v_base_phase:.1f} В (Фазная)"))
             print(f"-"*40)
-            print("СТАТИСТИКА ЗА СУТКИ:")
+            print(tr("DAILY STATISTICS:", "СТАТИСТИКА ЗА СУТКИ:"))
             
             for i, col in enumerate(v_cols):
                 ph = con_phases[i] if i < len(con_phases) else "?"
@@ -434,12 +456,12 @@ def run_simulation_for_node(target_bus_name, node_states_dict, pv_enabled=True, 
                 v_pu_min = v_min / v_base_phase if v_base_phase > 0 else 0
                 v_pu_max = v_max / v_base_phase if v_base_phase > 0 else 0
                 
-                status_min = "[⚠️ ПРОСАДКА]" if v_pu_min < 0.95 else ""
-                status_max = "[⚠️ ПЕРЕНАПРЯЖЕНИЕ]" if v_pu_max > 1.05 else ""
+                status_min = tr("[⚠️ SAG]", "[⚠️ ПРОСАДКА]") if v_pu_min < 0.95 else ""
+                status_max = tr("[⚠️ SWELL]", "[⚠️ ПЕРЕНАПРЯЖЕНИЕ]") if v_pu_max > 1.05 else ""
 
-                print(f"> Фаза {ph}:")
-                print(f"  Min U: {v_min:.1f} В ({v_pu_min:.3f} p.u.) @ {idx_to_time(t_min_idx)} {status_min}")
-                print(f"  Max U: {v_max:.1f} В ({v_pu_max:.3f} p.u.) @ {idx_to_time(t_max_idx)} {status_max}")
+                print(tr(f"> Phase {ph}:", f"> Фаза {ph}:"))
+                print(f"  Min U: {v_min:.1f} V ({v_pu_min:.3f} p.u.) @ {idx_to_time(t_min_idx)} {status_min}")
+                print(f"  Max U: {v_max:.1f} V ({v_pu_max:.3f} p.u.) @ {idx_to_time(t_max_idx)} {status_max}")
 
             p_max = 0
             for col in p_cols:
@@ -452,22 +474,23 @@ def run_simulation_for_node(target_bus_name, node_states_dict, pv_enabled=True, 
                 if curr_max > i_max: i_max = curr_max
 
             print(f"-"*40)
-            print(f"Пиковая нагр.: {p_max:.2f} кВт")
-            print(f"Макс. ток:     {i_max:.2f} А")
-            print(f"Общ. P (сеть): {max_total_kw:.2f} кВт")
+            print(tr(f"Peak Load:     {p_max:.2f} kW", f"Пиковая нагр.: {p_max:.2f} кВт"))
+            print(tr(f"Max Current:   {i_max:.2f} A", f"Макс. ток:     {i_max:.2f} А"))
+            print(tr(f"Total P (grid): {max_total_kw:.2f} kW", f"Общ. P (сеть): {max_total_kw:.2f} кВт"))
             print(f"{'='*40}\n")
 
             time_hours = df.index * 0.25
             fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(10, 12), sharex=True)
             plt.subplots_adjust(bottom=0.08, hspace=0.25)
             
-            pv_st = f"[PV ВКЛ, {temperature}°C]" if pv_enabled else "[PV ВЫКЛ]"
-            fig.canvas.manager.set_window_title(f"Узел {target_bus_name} | {date_str}")
+            pv_st = tr(f"[PV ON, {temperature}°C]", f"[PV ВКЛ, {temperature}°C]") if pv_enabled else tr("[PV OFF]", "[PV ВЫКЛ]")
+            fig.canvas.manager.set_window_title(f"{tr('Node', 'Узел')} {target_bus_name} | {date_str}")
             
-            load_info = f" (+{test_load_kw} кВт TestNode)" if test_load_kw > 0 else ""
+            load_info = f" (+{test_load_kw} kW TestNode)" if test_load_kw > 0 else ""
             
-            mode_str = "(Активное Управление)" if active_control else "(Мониторинг / Без управления)"
-            ax1.set_title(f'Узел {target_bus_name}: {date_str} {pv_st}{load_info}\n{mode_str}', fontsize=14, fontweight='bold')
+            mode_str = tr("(Active Control)", "(Активное Управление)") if active_control else tr("(Monitoring / No Control)", "(Мониторинг / Без управления)")
+            ax1.set_title(tr(f'Node {target_bus_name}: {date_str} {pv_st}{load_info}\n{mode_str}', 
+                             f'Узел {target_bus_name}: {date_str} {pv_st}{load_info}\n{mode_str}'), fontsize=14, fontweight='bold')
 
             max_v_plot = 0
             for idx, col in enumerate(v_cols):
@@ -480,9 +503,9 @@ def run_simulation_for_node(target_bus_name, node_states_dict, pv_enabled=True, 
                 ax1.axvline(x=t, color='green', linestyle='-', alpha=0.3, linewidth=2)
             
             if regulation_steps:
-                ax1.plot([], [], color='green', linestyle='-', alpha=0.5, label='Регулирование')
+                ax1.plot([], [], color='green', linestyle='-', alpha=0.5, label=tr('Regulation', 'Регулирование'))
 
-            ax1.set_ylabel('Напряжение (В)')
+            ax1.set_ylabel(tr('Voltage (V)', 'Напряжение (В)'))
             ax1.grid(True, linestyle=':', alpha=0.6)
             ax1.legend(loc='upper right', fontsize='small')
             if max_v_plot < 1000: ax1.set_ylim(0, 3000)
@@ -491,15 +514,15 @@ def run_simulation_for_node(target_bus_name, node_states_dict, pv_enabled=True, 
             for idx, col in enumerate(i_cols):
                 ph = con_phases[idx] if idx < len(con_phases) else "?"
                 ax2.plot(time_hours, df[col], label=f"I ph{ph}")
-            ax2.set_ylabel('Ток (А)')
+            ax2.set_ylabel(tr('Current (A)', 'Ток (А)'))
             ax2.grid(True, linestyle=':', alpha=0.6)
             ax2.legend(loc='upper right')
 
             for idx, col in enumerate(p_cols):
                 ph = con_phases[idx] if idx < len(con_phases) else "?"
                 ax3.plot(time_hours, df[col], label=f"P ph{ph}")
-            ax3.set_ylabel('Мощность (кВт)')
-            ax3.set_xlabel('Время (часы)')
+            ax3.set_ylabel(tr('Power (kW)', 'Мощность (кВт)'))
+            ax3.set_xlabel(tr('Time (hours)', 'Время (часы)'))
             ax3.set_xlim(0, 24); ax3.set_xticks(range(0, 25, 2))
             ax3.grid(True, linestyle=':', alpha=0.6)
             ax3.legend(loc='upper right')
@@ -520,7 +543,9 @@ def run_simulation_for_node(target_bus_name, node_states_dict, pv_enabled=True, 
                 lv.set_xdata([x, x]); li.set_xdata([x, x]); lp.set_xdata([x, x])
                 idx = (np.abs(time_hours - x)).argmin()
                 tm = int(round(time_hours[idx]*60))
-                info = f"Время: {tm//60:02d}:{tm%60:02d}\n" + "-"*20 + "\n"
+                
+                t_lbl = tr("Time:", "Время:")
+                info = f"{t_lbl} {tm//60:02d}:{tm%60:02d}\n" + "-"*20 + "\n"
                 
                 for i, c in enumerate(v_cols):
                      val = df[c].iloc[idx]
@@ -542,5 +567,5 @@ def run_simulation_for_node(target_bus_name, node_states_dict, pv_enabled=True, 
 
             fig.canvas.mpl_connect('motion_notify_event', on_move)
             plt.show()
-        except Exception as e: print(f"Ошибка графика: {e}")
-    else: print("❌ Решение не сошлось.")
+        except Exception as e: print(tr(f"Plot error: {e}", f"Ошибка графика: {e}"))
+    else: print(tr("❌ Solution did not converge.", "❌ Решение не сошлось."))
