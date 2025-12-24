@@ -6,12 +6,7 @@ from matplotlib.animation import FuncAnimation
 import numpy as np
 import datetime
 from run_qsts_plot import run_simulation_for_node, analyze_voltage_violations, clear_regulator_state
-
-# --- LANGUAGE SETTINGS (SELECT 'EN' or 'RU') ---
-LANG = 'EN'
-
-def tr(en_text, ru_text):
-    return en_text if LANG == 'EN' else ru_text
+from localization import translate as tr
 
 # --- ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ---
 node_states = {}       
@@ -58,7 +53,7 @@ def build_network_tree(circuit):
                     if parent not in tree: tree[parent] = []
                     tree[parent].append(neighbor)
                     queue.append(neighbor)
-    print(tr(f"Tree built. Nodes covered: {len(visited)}", f"Дерево построено. Охвачено узлов: {len(visited)}"))
+    print(tr("tree_built", count=len(visited)))
     return tree
 
 def get_downstream_nodes(start_nodes):
@@ -84,10 +79,10 @@ def plot_interactive_topology():
     master_file = current_dir / "qsts" / "master.dss"
     buscoords_file = current_dir / "qsts" / "Buscoords.dss"
 
-    print(tr(f"Loading circuit from: {master_file}", f"Загрузка схемы из: {master_file}"))
+    print(tr("loading_circuit", file=master_file))
     text.Command = f'Compile "{master_file}"'
     if not buscoords_file.exists():
-        print(tr("Error: No coordinates file", "Ошибка: Нет файла координат"))
+        print(tr("no_coordinates_file"))
         return
     text.Command = f'Buscoords "{buscoords_file}"'
     text.Command = "UpdateStorage"
@@ -107,7 +102,7 @@ def plot_interactive_topology():
     pv_buses = set()
     pvs = circuit.PVSystems
     i = pvs.First
-    print(tr(f"Searching for PV panels... Found: {pvs.Count}", f"Поиск солнечных панелей... Найдено: {pvs.Count}"))
+    print(tr("searching_pv", count=pvs.Count))
     while i > 0:
         bus_name = ae.BusNames[0].split('.')[0]
         pv_buses.add(bus_name)
@@ -161,7 +156,7 @@ def plot_interactive_topology():
 
     fig, ax = plt.subplots(figsize=(16, 14))
     plt.subplots_adjust(left=0.25, bottom=0.25) 
-    ax.set_title(tr("IEEE 123 Map: Simulator & Analysis", "Карта IEEE 123: Тренажер и Анализ"), fontsize=16)
+    ax.set_title(tr("map_title"), fontsize=16)
 
     lines = circuit.Lines
     lc = lines.First
@@ -175,16 +170,16 @@ def plot_interactive_topology():
             ax.plot([x1, x2], [y1, y2], c=c, lw=w, zorder=z)
         lc = lines.Next
 
-    ax.plot([],[], c='black', lw=2, label=tr('3 Phases', '3 Фазы'))
-    ax.plot([],[], c='teal', lw=1.5, label=tr('2 Phases', '2 Фазы'))
-    ax.plot([],[], c='darkgray', lw=1, label=tr('1 Phase', '1 Фаза'))
+    ax.plot([],[], c='black', lw=2, label=tr('phases_3'))
+    ax.plot([],[], c='teal', lw=1.5, label=tr('phases_2'))
+    ax.plot([],[], c='darkgray', lw=1, label=tr('phase_1'))
 
     scatter_objects = {}
     lbl_map = {
-        'load': tr('Load', 'Нагрузка'), 
-        'reg': tr('Regulator', 'Регулятор'), 
-        'pv': tr('PV Panel', 'Солнечная панель'), 
-        'normal': tr('Node', 'Узел')
+        'load': tr('load'),
+        'reg': tr('regulator'),
+        'pv': tr('pv_panel'),
+        'normal': tr('node')
     }
 
     for g_name, g in groups.items():
@@ -220,7 +215,7 @@ def plot_interactive_topology():
     circuit.SetActiveBus("150")
     if circuit.ActiveBus.x != 0:
         ax.scatter(circuit.ActiveBus.x, circuit.ActiveBus.y, s=300, c='gold', marker='*', 
-                   label=tr('Source', 'Источник'), zorder=6, edgecolors='black')
+                   label=tr('source'), zorder=6, edgecolors='black')
 
     ax.legend(loc='upper right', shadow=True)
     ax.axis('equal')
@@ -229,9 +224,9 @@ def plot_interactive_topology():
     rax_mode = plt.axes([0.02, 0.70, 0.20, 0.12], facecolor='#f0f0f0')
     
     # Translated radio button options
-    opt_normal = tr('Normal Mode', 'Нормальный режим')
-    opt_sc = tr('Short Circuit', 'Короткое замыкание')
-    opt_open = tr('Open Line', 'Обрыв линии')
+    opt_normal = tr('normal_mode')
+    opt_sc = tr('short_circuit')
+    opt_open = tr('open_line')
     
     radio_mode = RadioButtons(rax_mode, (opt_normal, opt_sc, opt_open))
     
@@ -255,42 +250,42 @@ def plot_interactive_topology():
     except: pass
 
     plt.axes([0.02, 0.83, 0.20, 0.04], frameon=False)
-    plt.text(0, 0, tr("OPERATION MODE:", "РЕЖИМ РАБОТЫ:"), fontsize=11, fontweight='bold')
+    plt.text(0, 0, tr("operation_mode"), fontsize=11, fontweight='bold')
     plt.axis('off')
 
     rax_phase = plt.axes([0.02, 0.52, 0.20, 0.12], facecolor='#f0f0f0')
     check_phase = CheckButtons(rax_phase, 
-                               (tr('Phase 1', 'Фаза 1'), tr('Phase 2', 'Фаза 2'), tr('Phase 3', 'Фаза 3')), 
+                               (tr('phase_1_select'), tr('phase_2_select'), tr('phase_3_select')),
                                (True, False, False))
     plt.axes([0.02, 0.65, 0.20, 0.04], frameon=False)
-    plt.text(0, 0, tr("PHASE SELECTION:", "ВЫБОР ФАЗ:"), fontsize=11, fontweight='bold')
+    plt.text(0, 0, tr("phase_selection"), fontsize=11, fontweight='bold')
     plt.axis('off')
 
     rax_pv = plt.axes([0.02, 0.42, 0.20, 0.05], facecolor='#fffde7')
-    check_pv = CheckButtons(rax_pv, [tr('Enable PV Panels', 'Включить Солнечные Панели')], [True])
+    check_pv = CheckButtons(rax_pv, [tr('enable_pv')], [True])
 
     btn_reset_ax = plt.axes([0.02, 0.35, 0.09, 0.05])
-    btn_reset = Button(btn_reset_ax, tr('Reset', 'Сброс'), color='lightblue', hovercolor='0.9')
+    btn_reset = Button(btn_reset_ax, tr('reset'), color='lightblue', hovercolor='0.9')
     
     btn_anal_ax = plt.axes([0.12, 0.35, 0.10, 0.05])
-    btn_analyze = Button(btn_anal_ax, tr('Analyze V', 'Анализ V'), color='violet', hovercolor='magenta')
+    btn_analyze = Button(btn_anal_ax, tr('analyze_v'), color='violet', hovercolor='magenta')
 
     slider_load_ax = plt.axes([0.25, 0.18, 0.65, 0.03], facecolor='#ffcccc') 
-    slider_load = Slider(slider_load_ax, tr('TestNode Load (kW)', 'Нагрузка TestNode (кВт)'), 0, 5000, valinit=0, valstep=100, color='red')
+    slider_load = Slider(slider_load_ax, tr('testnode_load'), 0, 5000, valinit=0, valstep=100, color='red')
 
     slider_day_ax = plt.axes([0.25, 0.14, 0.65, 0.03], facecolor='lightgoldenrodyellow')
-    slider_day = Slider(slider_day_ax, tr('Day of Year', 'День года'), 1, 365, valinit=1, valstep=1, color='orange')
+    slider_day = Slider(slider_day_ax, tr('day_of_year'), 1, 365, valinit=1, valstep=1, color='orange')
     
     date_text_ax = plt.axes([0.25, 0.10, 0.65, 0.03], frameon=False)
     
     # Handle initial date text translation? 
     # Usually "1 January" is generic enough, but let's just stick to the update function.
-    start_date_str = tr("January 1", "1 Января")
+    start_date_str = tr("january_1")
     date_text = date_text_ax.text(0.5, 0.5, start_date_str, ha='center', va='center', fontsize=12, fontweight='bold')
     date_text_ax.axis('off')
 
     slider_temp_ax = plt.axes([0.25, 0.06, 0.65, 0.03], facecolor='lightblue')
-    slider_temp = Slider(slider_temp_ax, tr('Temperature (°C)', 'Температура (°C)'), -10, 50, valinit=25.0, valstep=1, color='blue')
+    slider_temp = Slider(slider_temp_ax, tr('temperature'), -10, 50, valinit=25.0, valstep=1, color='blue')
 
     def update_slider(val):
         day = int(val)
@@ -397,7 +392,7 @@ def plot_interactive_topology():
                 if closest_bus in node_states: del node_states[closest_bus]
             else:
                 if not selected_phases_list:
-                    print(tr("⚠ Warning: No phase selected!", "⚠ Внимание: Не выбрана ни одна фаза!"))
+                    print(tr("no_phase_selected"))
                     return
                 node_states[closest_bus] = {'mode': mode_eng, 'phases': selected_phases_list}
             
@@ -433,8 +428,7 @@ def plot_interactive_topology():
         try: manager.window.showMaximized()
         except: pass
 
-    msg_ready = tr("System ready...\n- Left Click: Inspect node\n- Right Click: Active control\n- 'Analyze V' button: Show voltage violations.", 
-                   "Система готова.\n- ЛКМ: Инспекция узла (без изменений)\n- ПКМ: Активное управление (изменяет регуляторы)\n- Кнопка 'Анализ V' покажет зоны перенапряжения/просадки.")
+    msg_ready = tr("system_ready_prompt")
     print(msg_ready)
     plt.show()
 

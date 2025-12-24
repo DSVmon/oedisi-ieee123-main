@@ -1,5 +1,6 @@
 import dss
 import numpy as np
+from localization import translate as tr
 
 class GridController:
     def __init__(self, circuit):
@@ -30,13 +31,13 @@ class GridController:
         if v_min < self.min_voltage:
             # Если напряжение упало, нужно ПОДНЯТЬ тап на регуляторе
             msg = self._change_tap(direction=+1)
-            actions.append(f"Шаг {step_number} [LOW V={v_min:.3f}]: {msg}")
+            actions.append(tr("step_low_v", step=step_number, v=v_min, msg=msg))
             
         # Сценарий Б: Высокое напряжение (Перенапряжение от Солнца)
         elif v_max > self.max_voltage:
             # Если напряжение высоко, нужно ОПУСТИТЬ тап
             msg = self._change_tap(direction=-1)
-            actions.append(f"Шаг {step_number} [HIGH V={v_max:.3f}]: {msg}")
+            actions.append(tr("step_high_v", step=step_number, v=v_max, msg=msg))
             
         return actions
 
@@ -56,6 +57,6 @@ class GridController:
         # Проверка физических ограничений (обычно +/- 16)
         if -16 <= new_tap <= 16:
             self.circuit.RegControls.TapNumber = new_tap
-            return f"Регулятор {reg_name}: Tap {current_tap} -> {new_tap}"
+            return tr("regulator_tap_change", name=reg_name, current=current_tap, new=new_tap)
         else:
-            return f"Регулятор {reg_name}: Достигнут предел ({current_tap})!"
+            return tr("regulator_limit_reached", name=reg_name, tap=current_tap)

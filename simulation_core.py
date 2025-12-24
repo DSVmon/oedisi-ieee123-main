@@ -2,6 +2,7 @@ import dss
 import pathlib
 import numpy as np
 import time
+from localization import translate as tr
 
 class SimulationCore:
     def __init__(self, sensors_file='sensors.json'):
@@ -32,7 +33,7 @@ class SimulationCore:
             with open(path, 'r') as f:
                 return json.load(f)
         except Exception as e:
-            print(f"⚠ Ошибка загрузки сенсоров {filename}: {e}. Используем пустой список.")
+            print(tr("error_loading_sensors", filename=filename, e=e))
             return []
 
     def reset(self, day_of_year=1, pv_enabled=True, temperature=25.0, load_scale=1.0):
@@ -178,7 +179,7 @@ class SimulationCore:
 
 # --- Блок тестирования производительности ---
 if __name__ == "__main__":
-    print("🚀 Запуск теста производительности ядра симуляции...")
+    print(tr("start_perf_test"))
     
     sim = SimulationCore()
     # Тестовый прогон: 10 дней
@@ -187,7 +188,7 @@ if __name__ == "__main__":
     
     start_time = time.time()
     
-    print(f"⏳ Симуляция {days_to_simulate} суток ({total_steps} шагов)...")
+    print(tr("simulating_days", days=days_to_simulate, steps=total_steps))
     
     for day in range(1, days_to_simulate + 1):
         # Сброс дня
@@ -216,7 +217,7 @@ if __name__ == "__main__":
     duration = end_time - start_time
     fps = total_steps / duration
     
-    print(f"✅ Готово!")
-    print(f"⏱ Время выполнения: {duration:.4f} сек")
-    print(f"⚡ Скорость: {fps:.1f} шагов/сек (Steps Per Second)")
-    print(f"ℹ️ Это значит, что 1 год обучения (35k шагов) займет ~{35040/fps/60:.1f} минут.")
+    print(tr("done"))
+    print(tr("execution_time", duration=duration))
+    print(tr("speed", fps=fps))
+    print(tr("training_time_estimate", minutes=35040/fps/60))
