@@ -132,7 +132,7 @@ def plot_interactive_topology():
         'load':   {'x': [], 'y': [], 'names': [], 'base_color': 'red'},
         'reg':    {'x': [], 'y': [], 'names': [], 'base_color': 'orange'},
         'pv':     {'x': [], 'y': [], 'names': [], 'base_color': 'gold'}, 
-        'normal': {'x': [], 'y': [], 'names': [], 'base_color': 'dodgerblue'}
+        'normal': {'x': [], 'y': [], 'names': [], 'base_color': 'darkblue'}
     }
 
     all_bus_names = circuit.AllBusNames
