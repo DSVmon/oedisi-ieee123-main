@@ -71,6 +71,9 @@ def get_downstream_nodes(start_nodes):
 def plot_interactive_topology():
     global network_tree, bus_phases, bus_to_scatter, original_colors, voltage_issues
     
+    # Инициализация переменной для хранения последнего выбранного узла
+    plot_interactive_topology.last_selected_bus = None
+
     dss_engine = dss.DSS
     text = dss_engine.Text
     circuit = dss_engine.ActiveCircuit
@@ -247,10 +250,14 @@ def plot_interactive_topology():
 
     btn_reset_ax = plt.axes([0.02, 0.35, 0.09, 0.05])
     btn_reset = Button(btn_reset_ax, config.tr("Reset"), color='lightblue', hovercolor='0.9')
-    
+
     # New AI Control button below Reset
     btn_ai_ax = plt.axes([0.02, 0.28, 0.09, 0.05])
     btn_ai = Button(btn_ai_ax, config.tr("AI Control Button"), color='lightgreen', hovercolor='0.9')
+
+    # Cascade Control button next to AI (shifted right)
+    btn_casc_ax = plt.axes([0.12, 0.28, 0.09, 0.05])
+    btn_cascade = Button(btn_casc_ax, config.tr("Cascade Control Button"), color='wheat', hovercolor='0.9')
 
     # Label for AI Load Increase
     plt.axes([0.02, 0.23, 0.09, 0.04], frameon=False)
@@ -367,14 +374,12 @@ def plot_interactive_topology():
                 closest_bus = bus
         
         if closest_bus and min_dist < 15:
-            # --- ЛОГИКА КЛИКОВ (ЛКМ vs ПКМ) ---
-            active_mode = False
-            if event.button == 1:   # ЛКМ (Левая) - Инспекция
-                active_mode = False
-            elif event.button == 3: # ПКМ (Правая) - Управление
-                active_mode = True
+            # --- ЛОГИКА КЛИКОВ (ЛКМ) ---
+            if event.button == 1:   # ЛКМ (Левая) - Инспекция и Выбор
+                plot_interactive_topology.last_selected_bus = closest_bus
+                print(f"Выбран узел: {closest_bus}")
             else:
-                return # Игнорируем колесико и прочее
+                return # Игнорируем остальные кнопки (в том числе ПКМ)
             # ----------------------------------
 
             mode_ru = radio_mode.value_selected
@@ -396,8 +401,8 @@ def plot_interactive_topology():
             
             update_markers()
             
-            # Запускаем симуляцию с нужным флагом active_control
-            run_simulation_for_node(closest_bus, node_states, pv_enabled=pv_on, day_of_year=day, temperature=temp, test_load_kw=load_kw, active_control=active_mode)
+            # Запускаем симуляцию в режиме мониторинга (без управления), чтобы просто обновить графики/состояние
+            run_simulation_for_node(closest_bus, node_states, pv_enabled=pv_on, day_of_year=day, temperature=temp, test_load_kw=load_kw, active_control=False)
 
     def on_reset(event):
         node_states.clear()
@@ -406,34 +411,53 @@ def plot_interactive_topology():
         clear_regulator_state()
         update_markers()
 
-    def on_ai_click(event):
-        # AI Logic: run simulation with AI controller and increased load
-        # Use currently selected parameters from UI
+    def on_cascade_click(event):
+        target = getattr(plot_interactive_topology, 'last_selected_bus', None)
+        if not target:
+            print(config.tr("Error No Node Selected"))
+            return
+
         pv_on = check_pv.get_status()[0]
         day = slider_day.val
         temp = slider_temp.val
-        load_kw = slider_load.val # Experimental load
+        load_kw = slider_load.val
 
-        # Determine target node (if any selected, otherwise use a default or handle graceful failure)
-        # Ideally AI works on the whole grid, but run_simulation_for_node expects a target bus for plotting.
-        # If no node is selected (no markers), we can pick a default sensitive node or just '150'.
-        # Let's try to find a selected node first.
-        target_bus = '150' # Default
-
-        # If user clicked a node (exists in node_states), use it.
-        if node_states:
-            target_bus = list(node_states.keys())[0]
-
+        # Run Cascade Control (active_control=True, ai_mode=False)
         run_simulation_for_node(
-            target_bus,
+            target,
             node_states,
             pv_enabled=pv_on,
             day_of_year=day,
             temperature=temp,
             test_load_kw=load_kw,
-            active_control=True, # AI implies active control
+            active_control=True,
+            ai_mode=False
+        )
+        on_analyze(event)
+
+    def on_ai_click(event):
+        # Use selected node for visualization if available, else '150'
+        target = getattr(plot_interactive_topology, 'last_selected_bus', None)
+        if not target: target = '150'
+
+        pv_on = check_pv.get_status()[0]
+        day = slider_day.val
+        temp = slider_temp.val
+        load_kw = slider_load.val
+
+        run_simulation_for_node(
+            target,
+            node_states,
+            pv_enabled=pv_on,
+            day_of_year=day,
+            temperature=temp,
+            test_load_kw=load_kw,
+            active_control=True,
             ai_mode=True
         )
+
+        # Update map immediately after AI simulation
+        on_analyze(event)
 
     def on_analyze(event):
         pv_on = check_pv.get_status()[0]
@@ -448,6 +472,7 @@ def plot_interactive_topology():
     fig.canvas.mpl_connect('button_press_event', on_plot_click)
     btn_reset.on_clicked(on_reset)
     btn_ai.on_clicked(on_ai_click)
+    btn_cascade.on_clicked(on_cascade_click)
     btn_analyze.on_clicked(on_analyze)
 
     manager = plt.get_current_fig_manager()
