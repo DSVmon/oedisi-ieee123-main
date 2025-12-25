@@ -2,8 +2,9 @@ import os
 import time
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import DummyVecEnv
-from stable_baselines3.common.callbacks import BaseCallback, CheckpointCallback # <-- Добавили
+from stable_baselines3.common.callbacks import BaseCallback, CheckpointCallback
 from stable_baselines3.common.monitor import Monitor
+import config
 
 # Импортируем нашу среду
 from gym_environment import IEEE123Env
@@ -33,9 +34,9 @@ class TensorboardCallback(BaseCallback):
         return True
 
 def main():
-    print("🚀 Инициализация процесса обучения...")
-    print(f"📂 Логи: {LOG_DIR}")
-    print(f"💾 Чекпоинты: {CHECKPOINT_DIR}")
+    print(config.tr("Init Training"))
+    print(config.tr("Logs Dir", LOG_DIR))
+    print(config.tr("Checkpoints Dir", CHECKPOINT_DIR))
 
     def make_env():
         env = IEEE123Env()
@@ -56,7 +57,7 @@ def main():
         gamma=0.99
     )
 
-    print(f"🧠 Старт обучения на {TIMESTEPS} шагов...")
+    print(config.tr("Start Training", TIMESTEPS))
     start_time = time.time()
 
     # --- СОЗДАЕМ ЧЕКПОИНТ-КОЛЛБЕК ---
@@ -76,12 +77,12 @@ def main():
     )
 
     end_time = time.time()
-    print(f"✅ Обучение завершено за {(end_time - start_time)/60:.1f} минут.")
+    print(config.tr("Training Done", (end_time - start_time)/60))
 
     # Финальное сохранение
     final_path = os.path.join(MODEL_DIR, "ppo_ieee123_final")
     model.save(final_path)
-    print(f"💾 Финальная модель сохранена: {final_path}.zip")
+    print(config.tr("Final Model Saved", final_path))
 
 if __name__ == "__main__":
     main()

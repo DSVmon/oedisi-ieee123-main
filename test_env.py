@@ -1,18 +1,19 @@
 from gym_environment import IEEE123Env
 import numpy as np
+import config # <--- Added config
 
 env = IEEE123Env()
 obs, _ = env.reset()
 
-print("Проверка среды:")
-print(f"1. Размер наблюдения: {obs.shape}")
-print(f"2. Пример наблюдения (первые 5): {obs[:5]}")
-print(f"3. Размерность действий: {env.action_space}")
+print(config.tr("Test Env Start"))
+print(config.tr("Test Obs Size", obs.shape))
+print(config.tr("Test Obs Ex", obs[:5]))
+print(config.tr("Test Action Dim", env.action_space))
 
 # Делаем случайный шаг
 action = env.action_space.sample()
 obs, reward, done, _, info = env.step(action)
 
-print(f"4. Награда за шаг: {reward:.4f}")
-print(f"5. Инфо: {info}")
-print("✅ Тест пройден!")
+print(config.tr("Test Reward", reward))
+print(config.tr("Test Info", info))
+print(config.tr("Test Passed"))

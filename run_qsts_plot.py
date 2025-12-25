@@ -4,6 +4,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 import datetime
+import config # <--- Added config
 
 # --- ГЛОБАЛЬНАЯ ПАМЯТЬ СОСТОЯНИЙ РЕГУЛЯТОРОВ ---
 GLOBAL_REGULATOR_STATE = {}
@@ -12,7 +13,7 @@ def clear_regulator_state():
     """Очищает память регуляторов (для кнопки Сброс)."""
     global GLOBAL_REGULATOR_STATE
     GLOBAL_REGULATOR_STATE = {}
-    print("🧹 Память регуляторов очищена.")
+    print(config.tr("Clear Memory"))
 
 # =============================================================================
 # КЛАСС КОНТРОЛЛЕРА
@@ -28,11 +29,11 @@ class GridController:
         self.xfmr_to_reg = self._map_transformers_to_regulators()
         self.reg_chain = self._get_upstream_regulators()
         
-        print(f"🎮 Контроллер для узла {target_bus}.")
+        print(config.tr("Controller Node", target_bus))
         if self.reg_chain:
-            print(f"⛓ Цепочка помощи: {' -> '.join(self.reg_chain)} (Всего: {len(self.reg_chain)})")
+            print(config.tr("Chain Help", ' -> '.join(self.reg_chain), len(self.reg_chain)))
         else:
-            print("⚠ На пути к этому узлу нет регуляторов!")
+            print(config.tr("Warn No Regs"))
 
     def _build_topology_map(self):
         adj = {}
@@ -131,10 +132,10 @@ class GridController:
 
         if v_min < self.min_voltage:
             direction = 1
-            reason = f"Просадка (min {v_min:.3f})"
+            reason = config.tr("Reason Low", v_min)
         elif v_max > self.max_voltage:
             direction = -1
-            reason = f"Перенапряжение (max {v_max:.3f})"
+            reason = config.tr("Reason High", v_max)
             
         if direction != 0:
             for reg_name in self.reg_chain:
@@ -144,11 +145,11 @@ class GridController:
                 
                 if -16 <= new_tap <= 16:
                     self.circuit.RegControls.TapNumber = new_tap
-                    actions.append(f"⏱ Шаг {step_number}: {reason} -> 🎯 {reg_name} (Tap {current_tap}->{new_tap})")
+                    actions.append(config.tr("Step Log", step_number, reason, reg_name, current_tap, new_tap))
                     action_occurred = True
                     break 
                 else:
-                    actions.append(f"⚠ Шаг {step_number}: {reg_name} НА ПРЕДЕЛЕ ({current_tap}). Передаю управление выше...")
+                    actions.append(config.tr("Limit Log", step_number, reg_name, current_tap))
                     continue
         
         return actions, action_occurred
@@ -193,7 +194,7 @@ def setup_circuit(dss_engine, node_states_dict, pv_enabled, day_of_year, tempera
 
     if test_load_kw > 0.0:
         text.Command = f"New Load.Test_Experiment_Load Bus1=TestNode.1.2.3 Phases=3 kV=4.16 kW={test_load_kw} PF=0.98 Model=1"
-        print(f"🔥 ВНИМАНИЕ: Подключена экспериментальная нагрузка {test_load_kw} кВт на TestNode!")
+        print(config.tr("Load Connected", test_load_kw))
 
     for bus, state in node_states_dict.items():
         mode = state['mode']
@@ -221,17 +222,17 @@ def analyze_voltage_violations(node_states_dict, pv_enabled, day_of_year, temper
     dss_engine.Text.Command = "Set ControlMode=OFF"
     
     if GLOBAL_REGULATOR_STATE:
-        print("\n🔧 [АНАЛИЗ] Применяем настройки регуляторов из памяти:")
+        print(config.tr("Apply Reg Settings"))
         for reg_name, tap_val in GLOBAL_REGULATOR_STATE.items():
             circuit.RegControls.Name = reg_name
             circuit.RegControls.TapNumber = tap_val
-            print(f"   -> {reg_name} установлен на Tap {tap_val}")
+            print(config.tr("Reg Set To", reg_name, tap_val))
     else:
-        print("\nℹ️ [АНАЛИЗ] Нет сохраненных настроек. Используем исходные.")
+        print(config.tr("No Settings"))
     
     dss_engine.Text.Command = "Set Number=1" 
     
-    print("\n--- СКАНИРОВАНИЕ СЕТИ (ControlMode=OFF) ---")
+    print(config.tr("Scan Net"))
     max_v = {}
     min_v = {}
     max_total_kw = 0.0
@@ -258,20 +259,32 @@ def analyze_voltage_violations(node_states_dict, pv_enabled, day_of_year, temper
             if v < min_v[bus] and v > 0.0: min_v[bus] = v
 
     over, under = set(), set()
-    print(f"{'УЗЕЛ':<10} | {'СТАТУС':<15} | {'ЗНАЧЕНИЕ (p.u.)'}")
-    print("-" * 45)
-    print(f"⚡ Общая активная мощность в сети (пик): {max_total_kw:.2f} кВт")
+    # Format the header row using the translated template
+    header_fmt = config.tr("Table Header")
+    # Because config.tr returns a format string like "{:<10}...", we need to format it with empty strings
+    # OR we just hardcode the column names in the config.
+    # Actually, let's fix the logic. The config now contains the TEXT for the columns, but with format specifiers.
+    # To be safe and simple: I updated config to contain the full string with placeholders for alignment if needed,
+    # but the simplest way is to format it with the column names themselves if they were dynamic,
+    # but here they are static in the config value (except for alignment).
+    # Let's use .format() with dummy values if the string expects arguments, or just print if it's a fixed string.
+    # The updated config removes the quotes around the last column, but keeps the brace placeholders {:<10}.
+    # So we must provide arguments.
+    # "RU": "{:<10} | {:<15} | ЗНАЧЕНИЕ (p.u.)"
+    # This expects 2 arguments.
+    print(header_fmt.format(config.tr("Column Node"), config.tr("Column Status")))
+    print(config.tr("Total Power Peak", max_total_kw))
     print("-" * 45)
     
     sorted_buses = sorted(max_v.keys())
     for bus in sorted_buses:
         if bus in ['150', 'sourcebus']: continue
         if min_v[bus] < 0.95 and min_v[bus] > 0.001: 
-            under.add(bus); print(f"{bus:<10} | ПРОСАДКА      | {min_v[bus]:.4f}")
+            under.add(bus); print(config.tr("Under Voltage", bus, min_v[bus]))
         elif max_v[bus] > 1.05:
-            over.add(bus); print(f"{bus:<10} | ПЕРЕНАПРЯЖЕНИЕ | {max_v[bus]:.4f}")
+            over.add(bus); print(config.tr("Over Voltage", bus, max_v[bus]))
 
-    if not over and not under: print("✅ Нарушений не обнаружено.")
+    if not over and not under: print(config.tr("No Violations"))
     return over, under
 
 def run_simulation_for_node(target_bus_name, node_states_dict, pv_enabled=True, day_of_year=1, temperature=25.0, test_load_kw=0.0, active_control=True):
@@ -284,7 +297,7 @@ def run_simulation_for_node(target_bus_name, node_states_dict, pv_enabled=True, 
     setup_circuit(dss_engine, node_states_dict, pv_enabled, day_of_year, temperature, test_load_kw)
     
     if GLOBAL_REGULATOR_STATE:
-        print("\n📥 [СТАРТ] Восстанавливаем состояние регуляторов из памяти:")
+        print(config.tr("Restoring State"))
         for reg_name, tap_val in GLOBAL_REGULATOR_STATE.items():
             circuit.RegControls.Name = reg_name
             circuit.RegControls.TapNumber = tap_val
@@ -292,18 +305,18 @@ def run_simulation_for_node(target_bus_name, node_states_dict, pv_enabled=True, 
     # --- ИНСПЕКЦИЯ СОСТАВА УЗЛА ---
     circuit.SetActiveBus(target_bus_name)
     print(f"\n{'='*40}")
-    print(f"🧐 ИНСПЕКЦИЯ УЗЛА {target_bus_name}")
+    print(config.tr("Inspect Node", target_bus_name))
     pce = circuit.ActiveBus.AllPCEatBus 
     pde = circuit.ActiveBus.AllPDEatBus 
-    print(f"🔌 Потребители/Генераторы (PCE): {pce}")
-    print(f"⚡ Линии/Трансформаторы  (PDE): {pde}")
+    print(config.tr("ConsGen", pce))
+    print(config.tr("LinesTrans", pde))
     if len(pce) > 0 and test_load_kw == 0 and "TestNode" in target_bus_name:
-        print("⚠ ВНИМАНИЕ: На узле есть нагрузка, хотя слайдер на 0! Проверьте файлы .dss")
+        print(config.tr("Warn Load 0"))
     print(f"{'='*40}")
     # ------------------------------
 
     # --- ВЫВОД СОСТОЯНИЯ РЕГУЛЯТОРОВ (ТЕПЕРЬ ДЛЯ ВСЕХ РЕЖИМОВ) ---
-    print("\n🏁 [ТЕКУЩЕЕ СОСТОЯНИЕ] Положения регуляторов:")
+    print(config.tr("Current Reg State"))
     regs = circuit.RegControls
     idx = regs.First
     while idx > 0:
@@ -315,15 +328,15 @@ def run_simulation_for_node(target_bus_name, node_states_dict, pv_enabled=True, 
     if active_control:
         controller = GridController(circuit, target_bus_name)
     else:
-        print("\n👁️ [РЕЖИМ МОНИТОРИНГА] Управление регуляторами ОТКЛЮЧЕНО.")
-        print("   Симуляция пройдет с текущими (восстановленными) настройками.")
+        print(config.tr("Monitor Mode"))
+        print(config.tr("Sim Monitor"))
     
     text.Command = "Set ControlMode=OFF" 
     text.Command = "Set Number=1"
 
     elem, term = get_controlling_element(circuit, target_bus_name)
     if not elem:
-        print(f"❌ Ошибка: Не к чему подключить монитор для {target_bus_name}")
+        print(config.tr("Error No Monitor", target_bus_name))
         return
 
     monitor_vi = f"Mon_Target_{target_bus_name}_VI"
@@ -331,7 +344,7 @@ def run_simulation_for_node(target_bus_name, node_states_dict, pv_enabled=True, 
     text.Command = f"New Monitor.{monitor_vi} element={elem} terminal={term} mode=0"
     text.Command = f"New Monitor.{monitor_pq} element={elem} terminal={term} mode=1 ppolar=no"
     
-    print(f"\n🚀 Запуск симуляции (Узел {target_bus_name})...")
+    print(config.tr("Start Sim Node", target_bus_name))
     
     regulation_steps = []
     max_total_kw = 0.0
@@ -353,7 +366,7 @@ def run_simulation_for_node(target_bus_name, node_states_dict, pv_enabled=True, 
                 for msg in logs: print(msg)
 
     if active_control:
-        print("\n🏁 [КОНЕЦ] Итоговые положения регуляторов (сохранено в память):")
+        print(config.tr("Final Reg State"))
         regs = circuit.RegControls
         idx = regs.First
         while idx > 0:
@@ -362,7 +375,7 @@ def run_simulation_for_node(target_bus_name, node_states_dict, pv_enabled=True, 
             print(f"   - {regs.Name}: {tap_now}")
             idx = regs.Next
     else:
-        print("\nℹ️ [ИНФО] Состояние регуляторов не изменялось и не сохранялось.")
+        print(config.tr("Info No Change"))
 
     if solution.Converged:
         text.Command = f"Export Monitor {monitor_vi}"
@@ -395,7 +408,7 @@ def run_simulation_for_node(target_bus_name, node_states_dict, pv_enabled=True, 
             kv_base_dss = circuit.ActiveBus.kVBase 
             
             print(f"\n{'='*40}")
-            print(f" СВОДКА ПО УЗЛУ: {target_bus_name}")
+            print(config.tr("Node Summary", target_bus_name))
             print(f"{'='*40}")
             
             v_meas_mean = 0
@@ -412,11 +425,11 @@ def run_simulation_for_node(target_bus_name, node_states_dict, pv_enabled=True, 
                  v_base_phase = v_base_candidate / np.sqrt(3)
                  base_type_str = "(Линейное -> привели к Фазному)"
             
-            print(f"Параметры:      {circuit.ActiveBus.NumNodes} фаз(ы)")
-            print(f"База OpenDSS:   {kv_base_dss} кВ {base_type_str}")
-            print(f"База для p.u.:  {v_base_phase:.1f} В (Фазная)")
+            print(config.tr("Params Phases", circuit.ActiveBus.NumNodes))
+            print(config.tr("Base DSS", kv_base_dss, base_type_str))
+            print(config.tr("Base PU", v_base_phase))
             print(f"-"*40)
-            print("СТАТИСТИКА ЗА СУТКИ:")
+            print(config.tr("Daily Stats"))
             
             for i, col in enumerate(v_cols):
                 ph = con_phases[i] if i < len(con_phases) else "?"
@@ -434,12 +447,12 @@ def run_simulation_for_node(target_bus_name, node_states_dict, pv_enabled=True, 
                 v_pu_min = v_min / v_base_phase if v_base_phase > 0 else 0
                 v_pu_max = v_max / v_base_phase if v_base_phase > 0 else 0
                 
-                status_min = "[⚠️ ПРОСАДКА]" if v_pu_min < 0.95 else ""
-                status_max = "[⚠️ ПЕРЕНАПРЯЖЕНИЕ]" if v_pu_max > 1.05 else ""
+                status_min = config.tr("Warning Under") if v_pu_min < 0.95 else ""
+                status_max = config.tr("Warning Over") if v_pu_max > 1.05 else ""
 
-                print(f"> Фаза {ph}:")
-                print(f"  Min U: {v_min:.1f} В ({v_pu_min:.3f} p.u.) @ {idx_to_time(t_min_idx)} {status_min}")
-                print(f"  Max U: {v_max:.1f} В ({v_pu_max:.3f} p.u.) @ {idx_to_time(t_max_idx)} {status_max}")
+                print(config.tr("Phase Log", ph))
+                print(config.tr("Min U", v_min, v_pu_min, idx_to_time(t_min_idx), status_min))
+                print(config.tr("Max U", v_max, v_pu_max, idx_to_time(t_max_idx), status_max))
 
             p_max = 0
             for col in p_cols:
@@ -452,22 +465,22 @@ def run_simulation_for_node(target_bus_name, node_states_dict, pv_enabled=True, 
                 if curr_max > i_max: i_max = curr_max
 
             print(f"-"*40)
-            print(f"Пиковая нагр.: {p_max:.2f} кВт")
-            print(f"Макс. ток:     {i_max:.2f} А")
-            print(f"Общ. P (сеть): {max_total_kw:.2f} кВт")
+            print(config.tr("Peak Load", p_max))
+            print(config.tr("Max Current", i_max))
+            print(config.tr("Total P Net", max_total_kw))
             print(f"{'='*40}\n")
 
             time_hours = df.index * 0.25
             fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(10, 12), sharex=True)
             plt.subplots_adjust(bottom=0.08, hspace=0.25)
             
-            pv_st = f"[PV ВКЛ, {temperature}°C]" if pv_enabled else "[PV ВЫКЛ]"
+            pv_st = config.tr("PV On", temperature) if pv_enabled else config.tr("PV Off")
             fig.canvas.manager.set_window_title(f"Узел {target_bus_name} | {date_str}")
             
-            load_info = f" (+{test_load_kw} кВт TestNode)" if test_load_kw > 0 else ""
+            load_info = config.tr("Load Info", test_load_kw) if test_load_kw > 0 else ""
             
-            mode_str = "(Активное Управление)" if active_control else "(Мониторинг / Без управления)"
-            ax1.set_title(f'Узел {target_bus_name}: {date_str} {pv_st}{load_info}\n{mode_str}', fontsize=14, fontweight='bold')
+            mode_str = config.tr("Active Control Mode") if active_control else config.tr("Monitor Mode Plot")
+            ax1.set_title(config.tr("Node Plot Title", target_bus_name, date_str, pv_st, load_info, mode_str), fontsize=14, fontweight='bold')
 
             max_v_plot = 0
             for idx, col in enumerate(v_cols):
@@ -480,9 +493,9 @@ def run_simulation_for_node(target_bus_name, node_states_dict, pv_enabled=True, 
                 ax1.axvline(x=t, color='green', linestyle='-', alpha=0.3, linewidth=2)
             
             if regulation_steps:
-                ax1.plot([], [], color='green', linestyle='-', alpha=0.5, label='Регулирование')
+                ax1.plot([], [], color='green', linestyle='-', alpha=0.5, label=config.tr("Regulating"))
 
-            ax1.set_ylabel('Напряжение (В)')
+            ax1.set_ylabel(config.tr("Voltage V"))
             ax1.grid(True, linestyle=':', alpha=0.6)
             ax1.legend(loc='upper right', fontsize='small')
             if max_v_plot < 1000: ax1.set_ylim(0, 3000)
@@ -491,15 +504,15 @@ def run_simulation_for_node(target_bus_name, node_states_dict, pv_enabled=True, 
             for idx, col in enumerate(i_cols):
                 ph = con_phases[idx] if idx < len(con_phases) else "?"
                 ax2.plot(time_hours, df[col], label=f"I ph{ph}")
-            ax2.set_ylabel('Ток (А)')
+            ax2.set_ylabel(config.tr("Current A"))
             ax2.grid(True, linestyle=':', alpha=0.6)
             ax2.legend(loc='upper right')
 
             for idx, col in enumerate(p_cols):
                 ph = con_phases[idx] if idx < len(con_phases) else "?"
                 ax3.plot(time_hours, df[col], label=f"P ph{ph}")
-            ax3.set_ylabel('Мощность (кВт)')
-            ax3.set_xlabel('Время (часы)')
+            ax3.set_ylabel(config.tr("Power kW"))
+            ax3.set_xlabel(config.tr("Time Hours"))
             ax3.set_xlim(0, 24); ax3.set_xticks(range(0, 25, 2))
             ax3.grid(True, linestyle=':', alpha=0.6)
             ax3.legend(loc='upper right')
@@ -542,5 +555,5 @@ def run_simulation_for_node(target_bus_name, node_states_dict, pv_enabled=True, 
 
             fig.canvas.mpl_connect('motion_notify_event', on_move)
             plt.show()
-        except Exception as e: print(f"Ошибка графика: {e}")
-    else: print("❌ Решение не сошлось.")
+        except Exception as e: print(config.tr("Plot Error", e))
+    else: print(config.tr("Solution Diverged"))
