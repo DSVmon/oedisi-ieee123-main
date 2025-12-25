@@ -164,8 +164,8 @@ TRANSLATIONS = {
         "EN": "Temperature (°C)"
     },
     "AI Load Increase": {
-        "RU": "ПОВЫШЕННАЯ НАГРУЗКА ИИ (+{}%)",
-        "EN": "AI INCREASED LOAD (+{}%)"
+        "RU": "ПОВЫШЕННАЯ НАГРУЗКА СЕТИ (+{}%)",
+        "EN": "GRID INCREASED LOAD (+{}%)"
     },
     "AI Control Mode": {
         "RU": "УПРАВЛЕНИЕ ИИ",
