@@ -175,6 +175,14 @@ TRANSLATIONS = {
         "RU": "Управление ИИ",
         "EN": "AI Control"
     },
+    "Cascade Control Button": {
+        "RU": "Каскадное упр.",
+        "EN": "Cascade Control"
+    },
+    "Error No Node Selected": {
+        "RU": "❌ Выберите узел на карте (ЛКМ) для управления!",
+        "EN": "❌ Select a node on the map (LMB) to control!"
+    },
     "AI Action Log": {
         "RU": "🤖 ИИ Шаг {}: {}",
         "EN": "🤖 AI Step {}: {}"
