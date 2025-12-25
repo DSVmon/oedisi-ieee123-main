@@ -1,7 +1,0 @@
-dss-python
-numpy
-pandas
-matplotlib
-gymnasium
-stable-baselines3[extra]
-tensorboard
