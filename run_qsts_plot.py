@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import datetime
 import config # <--- Added config
+from ai_controller import AIController
 
 # --- ГЛОБАЛЬНАЯ ПАМЯТЬ СОСТОЯНИЙ РЕГУЛЯТОРОВ ---
 GLOBAL_REGULATOR_STATE = {}
@@ -287,7 +288,7 @@ def analyze_voltage_violations(node_states_dict, pv_enabled, day_of_year, temper
     if not over and not under: print(config.tr("No Violations"))
     return over, under
 
-def run_simulation_for_node(target_bus_name, node_states_dict, pv_enabled=True, day_of_year=1, temperature=25.0, test_load_kw=0.0, active_control=True):
+def run_simulation_for_node(target_bus_name, node_states_dict, pv_enabled=True, day_of_year=1, temperature=25.0, test_load_kw=0.0, active_control=True, ai_mode=False):
     global GLOBAL_REGULATOR_STATE
     dss_engine = dss.DSS
     text = dss_engine.Text
@@ -296,6 +297,12 @@ def run_simulation_for_node(target_bus_name, node_states_dict, pv_enabled=True, 
 
     setup_circuit(dss_engine, node_states_dict, pv_enabled, day_of_year, temperature, test_load_kw)
     
+    # Increase load for AI scenario
+    if ai_mode:
+        load_mult = 1.0 + (config.AI_LOAD_INCREASE_PERCENT / 100.0)
+        text.Command = f"Set LoadMult={load_mult}"
+        print(config.tr("AI Load Increase", config.AI_LOAD_INCREASE_PERCENT))
+
     if GLOBAL_REGULATOR_STATE:
         print(config.tr("Restoring State"))
         for reg_name, tap_val in GLOBAL_REGULATOR_STATE.items():
@@ -325,7 +332,9 @@ def run_simulation_for_node(target_bus_name, node_states_dict, pv_enabled=True, 
     # -------------------------------------------------------------
 
     controller = None
-    if active_control:
+    if ai_mode:
+        controller = AIController(circuit)
+    elif active_control:
         controller = GridController(circuit, target_bus_name)
     else:
         print(config.tr("Monitor Mode"))
@@ -487,7 +496,13 @@ def run_simulation_for_node(target_bus_name, node_states_dict, pv_enabled=True, 
             
             load_info = config.tr("Load Info", test_load_kw) if test_load_kw > 0 else ""
             
-            mode_str = config.tr("Active Control Mode") if active_control else config.tr("Monitor Mode Plot")
+            if ai_mode:
+                mode_str = config.tr("AI Control Mode")
+            elif active_control:
+                mode_str = config.tr("Active Control Mode")
+            else:
+                mode_str = config.tr("Monitor Mode Plot")
+
             ax1.set_title(config.tr("Node Plot Title", target_bus_name, date_str, pv_st, load_info, mode_str), fontsize=14, fontweight='bold')
 
             max_v_plot = 0

@@ -248,6 +248,10 @@ def plot_interactive_topology():
     btn_reset_ax = plt.axes([0.02, 0.35, 0.09, 0.05])
     btn_reset = Button(btn_reset_ax, config.tr("Reset"), color='lightblue', hovercolor='0.9')
     
+    # New AI Control button below Reset
+    btn_ai_ax = plt.axes([0.02, 0.28, 0.09, 0.05])
+    btn_ai = Button(btn_ai_ax, config.tr("AI Control Button"), color='lightgreen', hovercolor='0.9')
+
     btn_anal_ax = plt.axes([0.12, 0.35, 0.10, 0.05])
     btn_analyze = Button(btn_anal_ax, config.tr("Analyze V"), color='violet', hovercolor='magenta')
 
@@ -396,6 +400,35 @@ def plot_interactive_topology():
         clear_regulator_state()
         update_markers()
 
+    def on_ai_click(event):
+        # AI Logic: run simulation with AI controller and increased load
+        # Use currently selected parameters from UI
+        pv_on = check_pv.get_status()[0]
+        day = slider_day.val
+        temp = slider_temp.val
+        load_kw = slider_load.val # Experimental load
+
+        # Determine target node (if any selected, otherwise use a default or handle graceful failure)
+        # Ideally AI works on the whole grid, but run_simulation_for_node expects a target bus for plotting.
+        # If no node is selected (no markers), we can pick a default sensitive node or just '150'.
+        # Let's try to find a selected node first.
+        target_bus = '150' # Default
+
+        # If user clicked a node (exists in node_states), use it.
+        if node_states:
+            target_bus = list(node_states.keys())[0]
+
+        run_simulation_for_node(
+            target_bus,
+            node_states,
+            pv_enabled=pv_on,
+            day_of_year=day,
+            temperature=temp,
+            test_load_kw=load_kw,
+            active_control=True, # AI implies active control
+            ai_mode=True
+        )
+
     def on_analyze(event):
         pv_on = check_pv.get_status()[0]
         day = slider_day.val
@@ -408,6 +441,7 @@ def plot_interactive_topology():
 
     fig.canvas.mpl_connect('button_press_event', on_plot_click)
     btn_reset.on_clicked(on_reset)
+    btn_ai.on_clicked(on_ai_click)
     btn_analyze.on_clicked(on_analyze)
 
     manager = plt.get_current_fig_manager()
