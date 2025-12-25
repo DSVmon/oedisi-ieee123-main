@@ -220,39 +220,34 @@ def plot_interactive_topology():
     ax.legend(loc='upper right', shadow=True)
     ax.axis('equal')
     ax.grid(True, alpha=0.3)
-
+    
+    # --- LOCALE-SAFE UI CONTROLS ---
+    
+    # RadioButtons for Mode Selection
     rax_mode = plt.axes([0.02, 0.70, 0.20, 0.12], facecolor='#f0f0f0')
-    
-    # Translated radio button options
-    opt_normal = tr('normal_mode')
-    opt_sc = tr('short_circuit')
-    opt_open = tr('open_line')
-    
-    radio_mode = RadioButtons(rax_mode, (opt_normal, opt_sc, opt_open))
-    
-    translation_map = {
-        opt_normal: 'Normal', 
-        opt_sc: 'Short Circuit', 
-        opt_open: 'Open Line'
-    }
-    
+    mode_keys = ['Normal', 'Short Circuit', 'Open Line']
+    mode_labels = [tr('normal_mode'), tr('short_circuit'), tr('open_line')]
+    radio_mode = RadioButtons(rax_mode, mode_labels)
+
     try:
         circles = getattr(radio_mode, 'circles', [])
         if not circles: circles = [p for p in rax_mode.patches if hasattr(p, 'center')]
         for i, circle in enumerate(circles):
-            if i >= 3: break
+            if i >= len(mode_keys): break
             if hasattr(circle, 'set_visible'): circle.set_visible(False)
             if hasattr(circle, 'center'):
                 cx, cy = circle.center
                 if i == 0: rax_mode.scatter(cx, cy, s=100, c='dodgerblue', marker='o')
                 elif i == 1: rax_mode.scatter(cx, cy, s=120, c='yellow', marker='X', edgecolors='red')
                 elif i == 2: rax_mode.scatter(cx, cy, s=100, c='black', marker='s', edgecolors='white')
-    except: pass
+    except Exception as e:
+        print(f"Could not customize radio buttons: {e}")
 
     plt.axes([0.02, 0.83, 0.20, 0.04], frameon=False)
     plt.text(0, 0, tr("operation_mode"), fontsize=11, fontweight='bold')
     plt.axis('off')
 
+    # CheckButtons for Phase Selection
     rax_phase = plt.axes([0.02, 0.52, 0.20, 0.12], facecolor='#f0f0f0')
     check_phase = CheckButtons(rax_phase, 
                                (tr('phase_1_select'), tr('phase_2_select'), tr('phase_3_select')),
@@ -261,6 +256,7 @@ def plot_interactive_topology():
     plt.text(0, 0, tr("phase_selection"), fontsize=11, fontweight='bold')
     plt.axis('off')
 
+    # Other controls
     rax_pv = plt.axes([0.02, 0.42, 0.20, 0.05], facecolor='#fffde7')
     check_pv = CheckButtons(rax_pv, [tr('enable_pv')], [True])
 
@@ -270,6 +266,7 @@ def plot_interactive_topology():
     btn_anal_ax = plt.axes([0.12, 0.35, 0.10, 0.05])
     btn_analyze = Button(btn_anal_ax, tr('analyze_v'), color='violet', hovercolor='magenta')
 
+    # Sliders and Date display
     slider_load_ax = plt.axes([0.25, 0.18, 0.65, 0.03], facecolor='#ffcccc') 
     slider_load = Slider(slider_load_ax, tr('testnode_load'), 0, 5000, valinit=0, valstep=100, color='red')
 
@@ -277,9 +274,6 @@ def plot_interactive_topology():
     slider_day = Slider(slider_day_ax, tr('day_of_year'), 1, 365, valinit=1, valstep=1, color='orange')
     
     date_text_ax = plt.axes([0.25, 0.10, 0.65, 0.03], frameon=False)
-    
-    # Handle initial date text translation? 
-    # Usually "1 January" is generic enough, but let's just stick to the update function.
     start_date_str = tr("january_1")
     date_text = date_text_ax.text(0.5, 0.5, start_date_str, ha='center', va='center', fontsize=12, fontweight='bold')
     date_text_ax.axis('off')
@@ -287,18 +281,22 @@ def plot_interactive_topology():
     slider_temp_ax = plt.axes([0.25, 0.06, 0.65, 0.03], facecolor='lightblue')
     slider_temp = Slider(slider_temp_ax, tr('temperature'), -10, 50, valinit=25.0, valstep=1, color='blue')
 
-    def update_slider(val):
+    MONTHS = tr("months")
+    def update_date_slider(val):
         day = int(val)
         sim_date = datetime.date(2020, 1, 1) + datetime.timedelta(days=day - 1)
-        # Using standard English strftime if LANG is EN, else custom map could be needed but %B gives English month by default in most locales unless set otherwise.
-        # Assuming system locale is standard. 
-        date_text.set_text(sim_date.strftime("%d %B"))
-    slider_day.on_changed(update_slider)
+        month_name = MONTHS[sim_date.month - 1]
+        date_str = f"{sim_date.day} {month_name}"
+        date_text.set_text(date_str)
+
+    slider_day.on_changed(update_date_slider)
+    update_date_slider(slider_day.val) # Set initial text
     
     plot_interactive_topology.slider_day = slider_day
     plot_interactive_topology.slider_temp = slider_temp
     plot_interactive_topology.slider_load = slider_load
 
+    # --- ANIMATION LOGIC ---
     blink_state = False
     def animate(frame):
         nonlocal blink_state
@@ -331,18 +329,18 @@ def plot_interactive_topology():
             for i, name in enumerate(names):
                 if name in nodes_blink_black:
                     if blink_state: new_colors[i] = [0.1, 0.1, 0.1, 1]
-                
                 elif name in voltage_issues['over']:
                     new_colors[i] = [1, 0.5, 0, 1] 
                 elif name in voltage_issues['under']:
                     new_colors[i] = [0, 0.8, 1, 1] 
-
             sc.set_facecolors(new_colors)
+
         return scatter_objects.values()
 
     anim = FuncAnimation(fig, animate, interval=500, blit=False, cache_frame_data=False)
     plot_interactive_topology.anim = anim 
 
+    # --- EVENT HANDLERS ---
     def update_markers():
         global fault_markers
         for m in fault_markers: m.remove()
@@ -369,18 +367,11 @@ def plot_interactive_topology():
                 closest_bus = bus
         
         if closest_bus and min_dist < 15:
-            # --- ЛОГИКА КЛИКОВ (ЛКМ vs ПКМ) ---
-            active_mode = False
-            if event.button == 1:   # ЛКМ (Левая) - Инспекция
-                active_mode = False
-            elif event.button == 3: # ПКМ (Правая) - Управление
-                active_mode = True
-            else:
-                return # Игнорируем колесико и прочее
-            # ----------------------------------
+            active_mode = event.button == 3 # Right-click for active control
 
-            mode_ui = radio_mode.value_selected
-            mode_eng = translation_map[mode_ui]
+            selected_label = radio_mode.value_selected
+            mode_eng = mode_keys[mode_labels.index(selected_label)]
+
             status = check_phase.get_status()
             selected_phases_list = [i+1 for i, s in enumerate(status) if s]
             pv_on = check_pv.get_status()[0]
@@ -397,8 +388,6 @@ def plot_interactive_topology():
                 node_states[closest_bus] = {'mode': mode_eng, 'phases': selected_phases_list}
             
             update_markers()
-            
-            # Запускаем симуляцию с нужным флагом active_control
             run_simulation_for_node(closest_bus, node_states, pv_enabled=pv_on, day_of_year=day, temperature=temp, test_load_kw=load_kw, active_control=active_mode)
 
     def on_reset(event):
