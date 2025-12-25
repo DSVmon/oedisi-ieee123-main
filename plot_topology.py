@@ -260,9 +260,9 @@ def plot_interactive_topology():
     btn_cascade = Button(btn_casc_ax, config.tr("Cascade Control Button"), color='wheat', hovercolor='0.9')
 
     # Label for AI Load Increase
-    plt.axes([0.02, 0.23, 0.09, 0.04], frameon=False)
-    plt.text(0.5, 0.5, config.tr("AI Load Increase", config.AI_LOAD_INCREASE_PERCENT),
-             ha='center', va='center', fontsize=9, color='darkgreen')
+    plt.axes([0.02, 0.23, 0.20, 0.04], frameon=False)
+    plt.text(0.0, 0.5, config.tr("AI Load Increase", config.AI_LOAD_INCREASE_PERCENT),
+             ha='left', va='center', fontsize=9, color='darkgreen')
     plt.axis('off')
 
     btn_anal_ax = plt.axes([0.12, 0.35, 0.10, 0.05])
