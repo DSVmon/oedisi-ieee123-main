@@ -402,7 +402,15 @@ def run_simulation_for_node(target_bus_name, node_states_dict, pv_enabled=True, 
             target_state = node_states_dict.get(target_bus_name, {'mode': 'Normal', 'phases': []})
             t_mode, t_phases = target_state['mode'], target_state['phases']
             sim_date = datetime.date(2020, 1, 1) + datetime.timedelta(days=int(day_of_year) - 1)
-            date_str = sim_date.strftime("%d %B")
+
+            # Localized month name
+            month_idx = sim_date.month
+            month_names = config.tr("Months")
+            if isinstance(month_names, list) and len(month_names) > month_idx:
+                 m_name = month_names[month_idx]
+                 date_str = f"{sim_date.day} {m_name}"
+            else:
+                 date_str = sim_date.strftime("%d %B")
 
             circuit.SetActiveBus(target_bus_name)
             kv_base_dss = circuit.ActiveBus.kVBase 
@@ -420,10 +428,10 @@ def run_simulation_for_node(target_bus_name, node_states_dict, pv_enabled=True, 
             
             v_base_candidate = kv_base_dss * 1000
             v_base_phase = v_base_candidate
-            base_type_str = "(Фазное)"
+            base_type_str = config.tr("Base Type Phase")
             if v_base_candidate > 0 and (v_meas_mean / v_base_candidate) < 0.8 and v_meas_mean > 10:
                  v_base_phase = v_base_candidate / np.sqrt(3)
-                 base_type_str = "(Линейное -> привели к Фазному)"
+                 base_type_str = config.tr("Base Type LinearToPhase")
             
             print(config.tr("Params Phases", circuit.ActiveBus.NumNodes))
             print(config.tr("Base DSS", kv_base_dss, base_type_str))

@@ -167,6 +167,18 @@ TRANSLATIONS = {
         "RU": "1 Января",
         "EN": "January 1"
     },
+    "Months": {
+        "RU": ["", "Января", "Февраля", "Марта", "Апреля", "Мая", "Июня", "Июля", "Августа", "Сентября", "Октября", "Ноября", "Декабря"],
+        "EN": ["", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+    },
+    "Base Type Phase": {
+        "RU": "(Фазное)",
+        "EN": "(Phase)"
+    },
+    "Base Type LinearToPhase": {
+        "RU": "(Линейное -> привели к Фазному)",
+        "EN": "(Linear -> converted to Phase)"
+    },
     "Warning No Phase": {
         "RU": "⚠ Внимание: Не выбрана ни одна фаза!",
         "EN": "⚠ Warning: No phase selected!"
