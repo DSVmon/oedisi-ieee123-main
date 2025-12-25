@@ -163,6 +163,22 @@ TRANSLATIONS = {
         "RU": "Температура (°C)",
         "EN": "Temperature (°C)"
     },
+    "AI Load Increase": {
+        "RU": "ПОВЫШЕННАЯ НАГРУЗКА ИИ (+{}%)",
+        "EN": "AI INCREASED LOAD (+{}%)"
+    },
+    "AI Control Mode": {
+        "RU": "УПРАВЛЕНИЕ ИИ",
+        "EN": "AI CONTROL"
+    },
+    "AI Control Button": {
+        "RU": "Управление ИИ",
+        "EN": "AI Control"
+    },
+    "AI Action Log": {
+        "RU": "🤖 ИИ Шаг {}: {}",
+        "EN": "🤖 AI Step {}: {}"
+    },
     "January 1": {
         "RU": "1 Января",
         "EN": "January 1"
@@ -576,8 +592,8 @@ TRANSLATIONS = {
         "EN": "(Monitor / No Control)"
     },
     "Node Plot Title": {
-        "RU": "Узел {}: {} {}\n{}",
-        "EN": "Node {}: {} {}\n{}"
+        "RU": "Узел {}: {} {}{}\n{}",
+        "EN": "Node {}: {} {}{}\n{}"
     },
     "Regulating": {
         "RU": "Регулирование",
@@ -693,3 +709,4 @@ def tr_direct(en_text, ru_text):
     if LANGUAGE == 'EN':
         return en_text
     return ru_text
+AI_LOAD_INCREASE_PERCENT = 20
