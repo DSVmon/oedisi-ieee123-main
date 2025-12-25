@@ -449,7 +449,8 @@ def run_simulation_for_node(target_bus_name, node_states_dict, pv_enabled=True, 
             print(config.tr("Daily Stats"))
             
             for i, col in enumerate(v_cols):
-                ph = con_phases[i] if i < len(con_phases) else "?"
+                if i >= len(con_phases): continue
+                ph = con_phases[i]
                 v_min = df[col].min()
                 v_max = df[col].max()
                 t_min_idx = df[col].idxmin()
@@ -511,8 +512,9 @@ def run_simulation_for_node(target_bus_name, node_states_dict, pv_enabled=True, 
 
             max_v_plot = 0
             for idx, col in enumerate(v_cols):
+                if idx >= len(con_phases): continue
                 if df[col].max() > max_v_plot: max_v_plot = df[col].max()
-                ph = con_phases[idx] if idx < len(con_phases) else "?"
+                ph = con_phases[idx]
                 ax1.plot(time_hours, df[col], label=f"V ph{ph}")
 
             for step in regulation_steps:
@@ -529,14 +531,16 @@ def run_simulation_for_node(target_bus_name, node_states_dict, pv_enabled=True, 
             else: ax1.autoscale(enable=True, axis='y'); ax1.margins(y=0.1)
 
             for idx, col in enumerate(i_cols):
-                ph = con_phases[idx] if idx < len(con_phases) else "?"
+                if idx >= len(con_phases): continue
+                ph = con_phases[idx]
                 ax2.plot(time_hours, df[col], label=f"I ph{ph}")
             ax2.set_ylabel(config.tr("Current A"))
             ax2.grid(True, linestyle=':', alpha=0.6)
             ax2.legend(loc='upper right')
 
             for idx, col in enumerate(p_cols):
-                ph = con_phases[idx] if idx < len(con_phases) else "?"
+                if idx >= len(con_phases): continue
+                ph = con_phases[idx]
                 ax3.plot(time_hours, df[col], label=f"P ph{ph}")
             ax3.set_ylabel(config.tr("Power kW"))
             ax3.set_xlabel(config.tr("Time Hours"))
@@ -563,18 +567,21 @@ def run_simulation_for_node(target_bus_name, node_states_dict, pv_enabled=True, 
                 info = f"Время: {tm//60:02d}:{tm%60:02d}\n" + "-"*20 + "\n"
                 
                 for i, c in enumerate(v_cols):
+                     if i >= len(con_phases): continue
                      val = df[c].iloc[idx]
-                     p = con_phases[i] if i<len(con_phases) else '?'
+                     p = con_phases[i]
                      info += f"V{p}: {val:.1f} V\n"
                 info += "-"*20 + "\n"
                 for i, c in enumerate(i_cols):
+                     if i >= len(con_phases): continue
                      val = df[c].iloc[idx]
-                     p = con_phases[i] if i<len(con_phases) else '?'
+                     p = con_phases[i]
                      info += f"I{p}: {val:.1f} A\n"
                 info += "-"*20 + "\n"
                 for i, c in enumerate(p_cols):
+                     if i >= len(con_phases): continue
                      val = df[c].iloc[idx]
-                     p = con_phases[i] if i<len(con_phases) else '?'
+                     p = con_phases[i]
                      info += f"P{p}: {val:.1f} kW\n"
 
                 txt.set_text(info)
