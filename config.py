@@ -592,8 +592,8 @@ TRANSLATIONS = {
         "EN": "(Monitor / No Control)"
     },
     "Node Plot Title": {
-        "RU": "Узел {}: {} {}\n{}",
-        "EN": "Node {}: {} {}\n{}"
+        "RU": "Узел {}: {} {}{}\n{}",
+        "EN": "Node {}: {} {}{}\n{}"
     },
     "Regulating": {
         "RU": "Регулирование",

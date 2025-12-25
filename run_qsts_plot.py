@@ -498,6 +498,7 @@ def run_simulation_for_node(target_bus_name, node_states_dict, pv_enabled=True, 
             
             if ai_mode:
                 mode_str = config.tr("AI Control Mode")
+                mode_str += " | " + config.tr("AI Load Increase", config.AI_LOAD_INCREASE_PERCENT)
             elif active_control:
                 mode_str = config.tr("Active Control Mode")
             else:

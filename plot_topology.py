@@ -252,6 +252,12 @@ def plot_interactive_topology():
     btn_ai_ax = plt.axes([0.02, 0.28, 0.09, 0.05])
     btn_ai = Button(btn_ai_ax, config.tr("AI Control Button"), color='lightgreen', hovercolor='0.9')
 
+    # Label for AI Load Increase
+    plt.axes([0.02, 0.23, 0.09, 0.04], frameon=False)
+    plt.text(0.5, 0.5, config.tr("AI Load Increase", config.AI_LOAD_INCREASE_PERCENT),
+             ha='center', va='center', fontsize=9, color='darkgreen')
+    plt.axis('off')
+
     btn_anal_ax = plt.axes([0.12, 0.35, 0.10, 0.05])
     btn_analyze = Button(btn_anal_ax, config.tr("Analyze V"), color='violet', hovercolor='magenta')
 
