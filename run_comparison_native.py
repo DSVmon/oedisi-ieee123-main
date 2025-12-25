@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from stable_baselines3 import PPO
 from gym_environment import IEEE123Env
 from simulation_core import SimulationCore
+import config # <--- Added config
 
 # --- НАСТРОЙКИ ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -22,7 +23,7 @@ def find_latest_checkpoint():
 
 def run_native_opendss():
     """Прогон с РОДНОЙ автоматикой OpenDSS (без Python-управления)."""
-    print(f"▶ Запуск Native OpenDSS (Day {TEST_DAY}, Load {LOAD_SCALE*100}%)")
+    print(config.tr("Run Native", TEST_DAY, LOAD_SCALE*100))
     
     sim = SimulationCore()
     # Сброс (он ставит ControlMode=OFF)
@@ -56,7 +57,7 @@ def run_native_opendss():
 
 def run_ai_agent(model_path):
     """Прогон с НЕЙРОСЕТЬЮ (ControlMode=OFF)."""
-    print(f"▶ Запуск AI Agent (Day {TEST_DAY}, Load {LOAD_SCALE*100}%)")
+    print(config.tr("Run AI Agent", TEST_DAY, LOAD_SCALE*100))
     
     env = IEEE123Env()
     obs, _ = env.reset(seed=42)
@@ -86,9 +87,9 @@ def main():
     # 1. Ищем модель
     model_path = find_latest_checkpoint()
     if not model_path:
-        print("❌ Модель не найдена.")
+        print(config.tr("Model Not Found"))
         return
-    print(f"✅ Модель AI: {os.path.basename(model_path)}")
+    print(config.tr("Loading Model", os.path.basename(model_path)))
     
     # 2. Запускаем Native OpenDSS
     v_nat, t_nat, reg_names = run_native_opendss()
@@ -97,7 +98,7 @@ def main():
     v_ai, t_ai = run_ai_agent(model_path)
     
     # 4. Сравниваем графики
-    print("\n📊 Строим Битву Титанов (OpenDSS vs AI)...")
+    print(config.tr("Plotting Battle"))
     time_ax = np.arange(96) * 0.25
     
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 12), sharex=True)
@@ -113,11 +114,11 @@ def main():
     ax1.axhline(1.05, color='black', linestyle='--', linewidth=2)
     
     # Легенда
-    ax1.plot([], [], color='red', label='Native OpenDSS (Классика)')
-    ax1.plot([], [], color='blue', label='AI Agent (Нейросеть)')
+    ax1.plot([], [], color='red', label=config.tr("Label Native"))
+    ax1.plot([], [], color='blue', label=config.tr("Label AI Agent"))
     
-    ax1.set_title(f"Сравнение качества: Стандартная автоматика vs AI (Load {LOAD_SCALE*100}%)", fontsize=14)
-    ax1.set_ylabel("Напряжение (p.u.)")
+    ax1.set_title(config.tr("Comparison Quality Title", LOAD_SCALE*100), fontsize=14)
+    ax1.set_ylabel(config.tr("Voltage Axis"))
     ax1.legend(loc='lower left', fontsize=12)
     ax1.grid(True, alpha=0.3)
     
@@ -138,9 +139,9 @@ def main():
         # AI - сплошная
         ax2.step(time_ax, t_ai[:, idx], where='post', linestyle='-', color=colors[i], linewidth=2, label=f"{r_name} (AI)")
         
-    ax2.set_title("Стратегия переключений (Пример на 2 регуляторах)", fontsize=12)
-    ax2.set_ylabel("Tap Position")
-    ax2.set_xlabel("Время (часы)")
+    ax2.set_title(config.tr("Strategy Title"), fontsize=12)
+    ax2.set_ylabel(config.tr("Tap Position"))
+    ax2.set_xlabel(config.tr("Time Hours"))
     ax2.legend()
     ax2.grid(True)
     

@@ -1,6 +1,7 @@
 import gymnasium as gym
 import numpy as np
 from gymnasium import spaces
+import config # <--- Added config
 
 # Импортируем наше ядро (убедись, что файл называется simulation_core.py)
 from simulation_core import SimulationCore
@@ -23,7 +24,7 @@ class IEEE123Env(gym.Env):
         self.reg_names = self.sim.get_regulator_list()
         self.n_regulators = len(self.reg_names)
         
-        print(f"🤖 Среда инициализирована. Управляемых регуляторов: {self.n_regulators}")
+        print(config.tr("Env Init", self.n_regulators))
         print(f"   {self.reg_names}")
 
         # 2. Пространство действий (Action Space)
@@ -35,7 +36,7 @@ class IEEE123Env(gym.Env):
         # Вектор: [Напряжения (N штук) | Положения тапов (N штук) | Общая нагрузка (1) | Время (2)]
         self.n_sensors = len(self.sim.sensor_nodes)
         if self.n_sensors == 0:
-            print("⚠ ВНИМАНИЕ: Нет сенсоров в sensors.json! Нейросеть будет слепой.")
+            print(config.tr("Warning No Sensors"))
         
         # Размер вектора состояния
         # V (N_sens) + Taps (N_reg) + Power (1) + Time (2: sin/cos)

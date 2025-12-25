@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from stable_baselines3 import PPO
 from gym_environment import IEEE123Env
+import config # <--- Added config
 
 # --- НАСТРОЙКИ ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -22,7 +23,7 @@ def find_latest_checkpoint():
 
 def run_episode(env, model=None, label=""):
     """Прогоняет один день. Если model=None, то без управления."""
-    print(f"▶ Запуск сценария: {label} (Нагрузка {LOAD_SCALE*100}%)")
+    print(config.tr("Run Scenario", label, LOAD_SCALE*100))
     
     # Сброс с фиксированной перегрузкой
     obs, _ = env.reset(seed=42)
@@ -54,23 +55,23 @@ def main():
     # 1. Ищем модель
     model_path = find_latest_checkpoint()
     if not model_path:
-        print("❌ Модель не найдена. Сначала обучи агента.")
+        print(config.tr("Model Not Found Train First"))
         return
-    print(f"✅ Загружаем модель: {os.path.basename(model_path)}")
+    print(config.tr("Loading Model", os.path.basename(model_path)))
     model = PPO.load(model_path)
     
     env = IEEE123Env()
     
     # 2. Прогон БЕЗ НЕЙРОСЕТИ (Baseline)
-    print("\n--- ЭТАП 1: Работа без AI (Baseline) ---")
-    v_base, t_base = run_episode(env, model=None, label="Без AI")
+    print(config.tr("Phase 1 No AI"))
+    v_base, t_base = run_episode(env, model=None, label=config.tr("Label No AI"))
     
     # 3. Прогон С НЕЙРОСЕТЬЮ (AI Agent)
-    print("\n--- ЭТАП 2: Работа с AI ---")
-    v_ai, t_ai = run_episode(env, model=model, label="С AI")
+    print(config.tr("Phase 2 AI"))
+    v_ai, t_ai = run_episode(env, model=model, label=config.tr("Label With AI"))
     
     # 4. Визуализация: Было vs Стало
-    print("\n📊 Строим графики сравнения...")
+    print(config.tr("Plotting Comparison"))
     time_ax = np.arange(96) * 0.25
     
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 10), sharex=True)
@@ -82,15 +83,15 @@ def main():
     ax1.plot(time_ax, v_ai, color='blue', alpha=0.1, linewidth=1)
     
     # Линии коридора
-    ax1.axhline(0.95, color='black', linestyle='--', linewidth=2, label='Норма (0.95-1.05)')
+    ax1.axhline(0.95, color='black', linestyle='--', linewidth=2, label=config.tr("Norm Range"))
     ax1.axhline(1.05, color='black', linestyle='--', linewidth=2)
     
     # Фейковые линии для легенды
-    ax1.plot([], [], color='red', alpha=0.5, label='Без AI (Baseline)')
-    ax1.plot([], [], color='blue', alpha=0.5, label='C AI (Agent)')
+    ax1.plot([], [], color='red', alpha=0.5, label=config.tr("Label No AI"))
+    ax1.plot([], [], color='blue', alpha=0.5, label=config.tr("Label With AI"))
     
-    ax1.set_title(f"Сравнение стабильности (День {TEST_DAY}, Нагрузка {LOAD_SCALE*100}%)", fontsize=14)
-    ax1.set_ylabel("Напряжение (p.u.)")
+    ax1.set_title(config.tr("Comparison Title", TEST_DAY, LOAD_SCALE*100), fontsize=14)
+    ax1.set_ylabel(config.tr("Voltage Axis"))
     ax1.legend(loc='lower left')
     ax1.grid(True, alpha=0.3)
     
@@ -98,9 +99,9 @@ def main():
     for i, name in enumerate(env.reg_names):
         ax2.step(time_ax, t_ai[:, i], where='post', label=name)
         
-    ax2.set_title("Действия нейросети (Тапы)", fontsize=12)
-    ax2.set_ylabel("Положение")
-    ax2.set_xlabel("Время (часы)")
+    ax2.set_title(config.tr("Actions Title"), fontsize=12)
+    ax2.set_ylabel(config.tr("Tap Position"))
+    ax2.set_xlabel(config.tr("Time Hours"))
     ax2.legend(loc='upper right', ncol=3, fontsize='small')
     ax2.grid(True)
     
