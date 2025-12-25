@@ -297,8 +297,8 @@ def run_simulation_for_node(target_bus_name, node_states_dict, pv_enabled=True, 
 
     setup_circuit(dss_engine, node_states_dict, pv_enabled, day_of_year, temperature, test_load_kw)
     
-    # Increase load for AI scenario
-    if ai_mode:
+    # Apply global load increase (from config) for ALL modes
+    if config.AI_LOAD_INCREASE_PERCENT > 0:
         load_mult = 1.0 + (config.AI_LOAD_INCREASE_PERCENT / 100.0)
         text.Command = f"Set LoadMult={load_mult}"
         print(config.tr("AI Load Increase", config.AI_LOAD_INCREASE_PERCENT))
@@ -495,14 +495,17 @@ def run_simulation_for_node(target_bus_name, node_states_dict, pv_enabled=True, 
             fig.canvas.manager.set_window_title(f"Узел {target_bus_name} | {date_str}")
             
             load_info = config.tr("Load Info", test_load_kw) if test_load_kw > 0 else ""
-            
+
             if ai_mode:
                 mode_str = config.tr("AI Control Mode")
-                mode_str += " | " + config.tr("AI Load Increase", config.AI_LOAD_INCREASE_PERCENT)
             elif active_control:
                 mode_str = config.tr("Active Control Mode")
             else:
                 mode_str = config.tr("Monitor Mode Plot")
+
+            # Append load info to title if applicable
+            if config.AI_LOAD_INCREASE_PERCENT > 0:
+                mode_str += " | " + config.tr("AI Load Increase", config.AI_LOAD_INCREASE_PERCENT)
 
             ax1.set_title(config.tr("Node Plot Title", target_bus_name, date_str, pv_st, load_info, mode_str), fontsize=14, fontweight='bold')
 
