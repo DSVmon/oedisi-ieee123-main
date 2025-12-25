@@ -4,12 +4,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 import datetime
-
-# --- LANGUAGE SETTINGS (SELECT 'EN' or 'RU') ---
-LANG = 'EN'
-
-def tr(en_text, ru_text):
-    return en_text if LANG == 'EN' else ru_text
+from config import tr
 
 # --- ГЛОБАЛЬНАЯ ПАМЯТЬ СОСТОЯНИЙ РЕГУЛЯТОРОВ ---
 GLOBAL_REGULATOR_STATE = {}

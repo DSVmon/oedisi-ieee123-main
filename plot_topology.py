@@ -6,12 +6,7 @@ from matplotlib.animation import FuncAnimation
 import numpy as np
 import datetime
 from run_qsts_plot import run_simulation_for_node, analyze_voltage_violations, clear_regulator_state
-
-# --- LANGUAGE SETTINGS (SELECT 'EN' or 'RU') ---
-LANG = 'EN'
-
-def tr(en_text, ru_text):
-    return en_text if LANG == 'EN' else ru_text
+from config import tr
 
 # --- ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ---
 node_states = {}       
