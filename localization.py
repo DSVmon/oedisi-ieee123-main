@@ -4,6 +4,7 @@ from config import LANGUAGE
 translations = {
     'ru': {
         # main.py
+        "app_title": "=== OpenDSS IEEE 123 Симулятор ===",
         "launching_interactive_topology": "1. Запуск интерактивной топологии...",
         "click_on_nodes": "2. Кликайте на узлы на графике для расчета режимов.",
         "critical_error": "Критическая ошибка: {e}",
@@ -40,6 +41,10 @@ translations = {
         "january_1": "1 Января",
         "no_phase_selected": "⚠ Внимание: Не выбрана ни одна фаза!",
         "system_ready_prompt": "Система готова.\n- ЛКМ: Инспекция узла (без изменений)\n- ПКМ: Активное управление (изменяет регуляторы)\n- Кнопка 'Анализ V' покажет зоны перенапряжения/просадки.",
+        "months": [
+            "Января", "Февраля", "Марта", "Апреля", "Мая", "Июня",
+            "Июля", "Августа", "Сентября", "Октября", "Ноября", "Декабря"
+        ],
 
         # simulation_core.py
         "error_loading_sensors": "⚠ Ошибка загрузки сенсоров {filename}: {e}. Используем пустой список.",
@@ -71,6 +76,7 @@ translations = {
     },
     'en': {
         # main.py
+        "app_title": "=== OpenDSS IEEE 123 Simulation Launcher ===",
         "launching_interactive_topology": "1. Launching interactive topology...",
         "click_on_nodes": "2. Click on nodes on the graph to calculate modes.",
         "critical_error": "Critical error: {e}",
@@ -107,6 +113,10 @@ translations = {
         "january_1": "January 1",
         "no_phase_selected": "⚠ Warning: No phase selected!",
         "system_ready_prompt": "System ready...\n- Left Click: Inspect node\n- Right Click: Active control\n- 'Analyze V' button: Show voltage violations.",
+        "months": [
+            "January", "February", "March", "April", "May", "June",
+            "July", "August", "September", "October", "November", "December"
+        ],
 
         # simulation_core.py
         "error_loading_sensors": "⚠ Error loading sensors {filename}: {e}. Using an empty list.",
@@ -138,12 +148,19 @@ translations = {
     }
 }
 
-
 def translate(key, **kwargs):
     lang = LANGUAGE.lower()
+    # Special case for lists like months
+    if key in translations.get(lang, {}) and isinstance(translations[lang][key], list):
+        return translations[lang][key]
+
     if lang in translations and key in translations[lang]:
         return translations[lang][key].format(**kwargs)
+
     # Fallback to English if the key is not found in the target language
     if 'en' in translations and key in translations['en']:
+        if isinstance(translations['en'][key], list):
+            return translations['en'][key]
         return translations['en'][key].format(**kwargs)
+
     return key # return key as is if not found anywhere

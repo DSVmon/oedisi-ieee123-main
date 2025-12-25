@@ -9,7 +9,7 @@ from plot_topology import plot_interactive_topology
 from localization import translate as tr
 
 def main():
-    print("=== OpenDSS IEEE 123 Simulation Launcher ===")
+    print(tr("app_title"))
     print(tr("launching_interactive_topology"))
     print(tr("click_on_nodes"))
     
